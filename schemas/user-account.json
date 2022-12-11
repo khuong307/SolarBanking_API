@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "properties": {
+    "username": {
+      "type": "string"
+    },
+    "password": {
+      "type": "string"
+    },
+    "user_type_id": {
+      "type": "number"
+    },
+    "refresh_token": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "username",
+    "password"
+  ],
+  "additionalProperties": false
+}
