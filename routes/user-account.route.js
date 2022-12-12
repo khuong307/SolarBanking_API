@@ -7,6 +7,7 @@ import jwt from '../utils/jwt.js';
 import userAccountModel from '../models/user-account.model.js';
 import userTypeModel from '../models/user-type.model.js';
 import validate from '../middlewares/validate.mdw.js';
+import {authUser} from '../middlewares/auth.mdw.js';
 
 dotenv.config();
 
@@ -14,17 +15,19 @@ const userAccountSchema = JSON.parse(await readFile(new URL('../schemas/user-acc
 
 const router = express.Router();
 
+const SALT_ROUNDS = 10;
+const salt = bcrypt.genSaltSync(SALT_ROUNDS);
+
 router.post('/authentication', validate(userAccountSchema), async function(req, res) {
     const username = req.body.username;
     const password = req.body.password;
 
     const account = await userAccountModel.genericMethods.findById(username);
-
-    if (account.length !== 0) {
+    if (account !== null) {
         const hashedPassword = account.password;
-
         if (!bcrypt.compareSync(password, hashedPassword))
             return res.status(400).json({
+                isSuccess: false,
                 message: "Username or password is incorrect!"
             });
 
@@ -35,6 +38,8 @@ router.post('/authentication', validate(userAccountSchema), async function(req, 
         await userAccountModel.updateLastExpiredAt(username);
 
         return res.json({
+            isSuccess: true,
+            message: 'Login successfully!',
             accessToken,
             refreshToken,
             account: {
@@ -46,7 +51,37 @@ router.post('/authentication', validate(userAccountSchema), async function(req, 
     }
     else
         return res.status(400).json({
+            isSuccess: false,
             message: "Username or password is incorrect!"
+        });
+});
+
+router.put('/:username/password', authUser, async function(req, res) {
+    const username = req.params.username;
+    const oldPassword = req.body.old_password || '';
+    const newPassword = req.body.new_password || '';
+
+    const account = await userAccountModel.genericMethods.findById(username);
+    if (account !== null) {
+        const hashedPassword = account.password;
+        if (!bcrypt.compareSync(oldPassword.toString(), hashedPassword))
+            return res.status(400).json({
+                isSuccess: false,
+                message: "Old password is incorrect!"
+            });
+
+        const newHashedPassword = await bcrypt.hash(newPassword.toString(), salt);
+        await userAccountModel.updatePassword(username, newHashedPassword);
+
+        return res.json({
+            isSuccess: true,
+            message: 'Change password successfully!'
+        });
+    }
+    else
+        return res.status(400).json({
+            isSuccess: false,
+            message: "Wrong username!"
         });
 });
 

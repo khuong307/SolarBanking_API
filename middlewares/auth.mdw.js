@@ -51,7 +51,7 @@ export function authRole(role) {
         const userType = await userTypeModel.findById(account.user_type_id);
 
         if (role !== userType.user_type_name)
-            return res.status(401).json({
+            return res.status(403).json({
                 message: 'Not allowed user!'
             });
 

@@ -19,5 +19,13 @@ export default {
     async findByUserId(id) {
         const ans = await db('user_account').where('user_id', id).select();
         return ans.length > 0 ? ans[0] : null;
+    },
+
+    updatePassword(username, hashedPassword) {
+        return db('user_account')
+            .where({username})
+            .update({
+                password: hashedPassword
+            });
     }
 };
