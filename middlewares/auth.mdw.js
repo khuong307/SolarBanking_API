@@ -17,9 +17,9 @@ export async function authUser(req, res, next) {
         });
     }
 
-    let tokenInfo = jwt.verifyToken(accessToken, secretKey);
+    let tokenInfo = await jwt.verifyToken(accessToken, secretKey);
     if (tokenInfo === null) {
-        tokenInfo = jwt.decodeToken(accessToken, secretKey);
+        tokenInfo = await jwt.decodeToken(accessToken, secretKey);
         if (tokenInfo === null)
             return res.status(401).json({
                 message: 'Unauthorized user'
@@ -29,7 +29,7 @@ export async function authUser(req, res, next) {
         const account = await userAccountModel.genericMethods.findById(username);
 
         if (account['refresh_token'] === refreshToken && moment().isBefore(account['last_expired_at'])) {
-            const newAccessToken = jwt.generateToken(username, secretKey, process.env.access_token_time);
+            const newAccessToken = await jwt.generateToken(username, secretKey, process.env.access_token_time);
 
             return res.json({
                 accessToken: newAccessToken

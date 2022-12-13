@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken';
 
 export default {
-     generateToken(payload, secretSignature, tokenLife) {
-        return jwt.sign(
+     async generateToken(payload, secretSignature, tokenLife) {
+        return await jwt.sign(
             {
                 payload,
             },
@@ -12,11 +12,11 @@ export default {
                 expiresIn: tokenLife,
             },
         );
-    },
+     },
 
-    decodeToken(token, secretKey) {
+    async decodeToken(token, secretKey) {
          try {
-             return jwt.verify(token, secretKey, {
+             return await jwt.verify(token, secretKey, {
                  ignoreExpiration: true,
              });
          } catch (e) {
@@ -24,9 +24,9 @@ export default {
          }
     },
 
-    verifyToken(token, secretKey) {
+    async verifyToken(token, secretKey) {
          try {
-             return jwt.verify(token, secretKey);
+             return await jwt.verify(token, secretKey);
          } catch (e) {
              return null;
          }
