@@ -46,7 +46,7 @@ export async function authUser(req, res, next) {
 
 export function authRole(role) {
     return async function (req, res, next) {
-        const userId = req.body.user_id;
+        const userId = req.body.user_id || req.params.userId;
         const account = await userAccountModel.findByUserId(userId);
         const userType = await userTypeModel.findById(account.user_type_id);
 

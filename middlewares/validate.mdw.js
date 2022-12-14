@@ -12,11 +12,11 @@ export default function validate(schema) {
 }
 
 export function validateParams(req, res, next) {
-    const id = +req.params.id;
+    const id = +req.params.userId;
 
     if (!Number.isInteger(id) || id <= 0)
         return res.status(400).json({
-            error: 'The id must be a positive integer'
+            error: 'The id parameter must be a positive integer'
         });
 
     next();

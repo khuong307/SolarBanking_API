@@ -10,10 +10,10 @@ export default function (tableName, idField) {
             return db(tableName).insert(entity);
         },
 
-        update(entity) {
-            const id = entity[idField];
-            delete entity[idField];
-            return db(tableName).where(idField, id).update(entity);
+        update(id, entity) {
+            return db(tableName).where({
+                [idField]: id
+            }).update(entity);
         },
 
         delete(id) {

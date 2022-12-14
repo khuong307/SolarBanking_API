@@ -11,7 +11,7 @@ import userAccountModel from '../models/user-account.model.js';
 import userTypeModel from '../models/user-type.model.js';
 import userModel from '../models/user.model.js';
 import forgetPasswordHistoryModel from '../models/forget-password-history.model.js';
-import validate from '../middlewares/validate.mdw.js';
+import validate, {validateParams} from '../middlewares/validate.mdw.js';
 import {authUser} from '../middlewares/auth.mdw.js';
 
 dotenv.config();
@@ -23,6 +23,7 @@ const router = express.Router();
 const SALT_ROUNDS = 10;
 const salt = bcrypt.genSaltSync(SALT_ROUNDS);
 
+// Login API
 router.post('/authentication', validate(userAccountSchema), async function(req, res) {
     const username = req.body.username;
     const password = req.body.password;
@@ -61,12 +62,13 @@ router.post('/authentication', validate(userAccountSchema), async function(req, 
         });
 });
 
-router.put('/:username/password', authUser, async function(req, res) {
-    const username = req.params.username;
+// Change password API
+router.put('/:userId/password', validateParams, authUser, async function(req, res) {
+    const userId = +req.params.userId || 0;
     const oldPassword = req.body.old_password || '';
     const newPassword = req.body.new_password || '';
 
-    const account = await userAccountModel.genericMethods.findById(username);
+    const account = await userAccountModel.findByUserId(userId);
     if (account !== null) {
         const hashedPassword = account.password;
         if (!bcrypt.compareSync(oldPassword.toString(), hashedPassword))
@@ -76,7 +78,7 @@ router.put('/:username/password', authUser, async function(req, res) {
             });
 
         const newHashedPassword = await bcrypt.hash(newPassword.toString(), salt);
-        await userAccountModel.updatePassword(username, newHashedPassword);
+        await userAccountModel.updatePassword(userId, newHashedPassword);
 
         return res.json({
             isSuccess: true,
@@ -90,6 +92,7 @@ router.put('/:username/password', authUser, async function(req, res) {
         });
 });
 
+// Validate email and send OTP code API
 router.post('/password/otp', async function(req, res) {
     const email = req.body.email || '';
     const user = await userModel.findByEmail(email.toString());
@@ -126,13 +129,13 @@ router.post('/password/otp', async function(req, res) {
         });
 });
 
+// Validate OTP code API
 router.post('/password/validation/otp', async function(req, res) {
     const otp = req.body.otp || '';
     const userId = req.body.user_id || 0;
 
     const lastForgetPassword = await forgetPasswordHistoryModel.findLastChangeById(userId);
     if (lastForgetPassword !== null) {
-        console.log(otp + lastForgetPassword.reset_at);
         if (otp === lastForgetPassword.otp_code && moment().isBefore(lastForgetPassword.reset_at))
             return res.json({
                 isSuccess: true,
@@ -153,6 +156,7 @@ router.post('/password/validation/otp', async function(req, res) {
         });
 });
 
+// Reset password API
 router.post('/password', async function(req, res) {
     const password = req.body.password || '';
     const token = req.body.reset_password_token || '';
@@ -161,7 +165,6 @@ router.post('/password', async function(req, res) {
     const lastForgetPassword = await forgetPasswordHistoryModel.findLastChangeById(userId);
     if (lastForgetPassword !== null) {
         const otp = lastForgetPassword.otp_code;
-        console.log(otp + lastForgetPassword.reset_at);
         if (!bcrypt.compareSync(otp + lastForgetPassword.reset_at, token.toString()))
             return res.status(400).json({
                 isSuccess: false,

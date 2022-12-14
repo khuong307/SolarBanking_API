@@ -10,6 +10,7 @@ import swaggerJsDoc from 'swagger-jsdoc';
 import {swaggerConfigOptions} from './utils/swagger.js';
 
 import userAccountRoute from './routes/user-account.route.js';
+import userRoute from './routes/user.route.js';
 
 const app = express();
 app.use(express.json());
@@ -21,6 +22,7 @@ app.use(
 );
 
 app.use('/api/accounts', userAccountRoute);
+app.use('/api/users', userRoute);
 
 app.get('/err', function (req, res) {
     throw new Error('Error!');

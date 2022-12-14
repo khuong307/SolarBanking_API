@@ -21,9 +21,11 @@ export default {
         return ans.length > 0 ? ans[0] : null;
     },
 
-    updatePassword(username, hashedPassword) {
+    updatePassword(userId, hashedPassword) {
         return db('user_account')
-            .where({username})
+            .where({
+                user_id: userId
+            })
             .update({
                 password: hashedPassword
             });
