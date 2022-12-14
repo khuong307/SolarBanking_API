@@ -1,0 +1,38 @@
+{
+  "type": "object",
+  "properties": {
+    "debt_id": {
+      "type": "number"
+    },
+    "user_id": {
+      "type": "number"
+    },
+    "debt_account_number": {
+      "type": "string"
+    },
+    "debt_amount": {
+      "type": "number"
+    },
+    "debt_message": {
+      "type": "string"
+    },
+    "paid_transaction_id": {
+      "type": "number"
+    },
+    "debt_status": {
+      "type": "enum"
+    },
+    "debt_cancel_message": {
+      "type": "string"
+    },
+    "debt_created_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id",
+    "debt_account_number",
+    "debt_amount"
+  ],
+  "additionalProperties": false
+}
