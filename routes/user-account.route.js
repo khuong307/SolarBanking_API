@@ -55,11 +55,11 @@ router.post('/authentication', validate(userAccountSchema), async function(req, 
             }
         });
     }
-    else
-        return res.status(400).json({
-            isSuccess: false,
-            message: "Username or password is incorrect!"
-        });
+
+    return res.status(400).json({
+        isSuccess: false,
+        message: "Username or password is incorrect!"
+    });
 });
 
 // Change password API
@@ -85,11 +85,11 @@ router.put('/:userId/password', validateParams, authUser, async function(req, re
             message: 'Change password successfully!'
         });
     }
-    else
-        return res.status(400).json({
-            isSuccess: false,
-            message: "Wrong username!"
-        });
+
+    return res.status(400).json({
+        isSuccess: false,
+        message: "Wrong username!"
+    });
 });
 
 // Validate email and send OTP code API
@@ -122,11 +122,11 @@ router.post('/password/otp', async function(req, res) {
             message: "OTP code was sent. Please check your email and verify!"
         });
     }
-    else
-        return res.status(400).json({
-            isSuccess: false,
-            message: "Email does not exist in the system!"
-        });
+
+    return res.status(400).json({
+        isSuccess: false,
+        message: "Email does not exist in the system!"
+    });
 });
 
 // Validate OTP code API
@@ -143,17 +143,17 @@ router.post('/password/validation/otp', async function(req, res) {
                 reset_password_token: await bcrypt.hash(otp + lastForgetPassword.reset_at, salt),
                 user_id: userId
             });
-        else
-            return res.status(400).json({
-                isSuccess: false,
-                message: 'Validation failed. OTP code may be incorrect or the session was expired!'
-            });
-    }
-    else
+
         return res.status(400).json({
             isSuccess: false,
-            message: 'Validation failed. Do not have any otp records for this user!'
+            message: 'Validation failed. OTP code may be incorrect or the session was expired!'
         });
+    }
+
+    return res.status(400).json({
+        isSuccess: false,
+        message: 'Validation failed. Do not have any otp records for this user!'
+    });
 });
 
 // Reset password API
@@ -189,11 +189,11 @@ router.post('/password', async function(req, res) {
             message: 'Reset successfully. Please back to login screen and sign up!'
         });
     }
-    else
-        return res.status(400).json({
-            isSuccess: false,
-            message: 'Reset failed. Do not have any otp records for this user!'
-        });
+
+    return res.status(400).json({
+        isSuccess: false,
+        message: 'Reset failed. Do not have any otp records for this user!'
+    });
 });
 
 export default router;
