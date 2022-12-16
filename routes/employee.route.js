@@ -12,6 +12,8 @@ import role from '../utils/role.js';
 import {balanceToInt, generateContent, generateAccount, generateTransfer} from '../utils/bank.js'
 import validate from '../middlewares/validate.mdw.js';
 import {authRole, authUser} from "../middlewares/auth.mdw.js";
+import notificationModel from "../models/notification.model.js";
+
 
 dotenv.config();
 
@@ -25,7 +27,6 @@ router.get('/customer/:accessInfo', authUser, authRole(role.EMPLOYEE), async fun
     const {accessInfo} = req.params
     const isBankAccount = await banking_accountModel.genericMethods.findByCol("account_number", accessInfo)
     const isUsername = await userAccountModel.genericMethods.findByCol("username", accessInfo)
-
     const bankAccountInfo = isBankAccount != null ?
         isBankAccount: isUsername != null ?
             await banking_accountModel.genericMethods.findByCol("user_id", isUsername.user_id) :
@@ -73,11 +74,20 @@ router.post('/customer/:account_number', validate(transferEmployee), authUser, a
             is_success: true,
             transaction_type: 1
         }
-        await transactionModel.genericMethods.add(newRecord)
-
+        const newTransaction = await transactionModel.genericMethods.add(newRecord)
         const customer_info = await userModel.genericMethods.findById(bankAccountInfo.user_id)
+        //mail
         const email_content = generateTransfer(customer_info.full_name, account_number, req.body.amount,bankAccountInfo.balance, message,  customer_info.email)
         mail(customer_info.email, "[SOLAR BANKING] [Transaction Information]", email_content)
+        //notification
+        const newNoti = {
+            user_id: customer_info.user_id,
+            transaction_id: newTransaction,
+            notification_message: message,
+            is_seen: 0,
+        }
+        await notificationModel.genericMethods.add(newNoti)
+
         return res.status(200).json({
             isFound: true,
             transaction_info : {
