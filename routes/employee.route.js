@@ -73,7 +73,6 @@ router.post('/customer/:account_number', validate(transferEmployee), async funct
 
         const customer_info = await userModel.findById(bankAccountInfo.user_id)
         const email_content = generateTransfer(customer_info.full_name, account_number, req.body.amount,bankAccountInfo.balance, message,  customer_info.email)
-        console.log(email_content)
         mail(customer_info.email, "[SOLAR BANKING] [Transaction Information]", email_content)
         return res.status(200).json({
             isFound: true,
