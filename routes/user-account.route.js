@@ -39,7 +39,7 @@ router.post('/authentication', validate(userAccountSchema), async function(req, 
 
         const refreshToken = account['refresh_token'];
         const accessToken = await jwt.generateToken(username, process.env.access_token_secret, process.env.access_token_time);
-        const userType = await userTypeModel.findById(account.user_type_id);
+        const userType = await userTypeModel.genericMethods.findById(account.user_type_id);
 
         await userAccountModel.updateLastExpiredAt(username);
 
@@ -172,6 +172,7 @@ router.post('/password', async function(req, res) {
             });
 
         const hashedPassword = await bcrypt.hash(password, salt);
+        console.log(hashedPassword);
         const account = await userAccountModel.findByUserId(userId);
         const newForgetPassword = {
             user_id: userId,

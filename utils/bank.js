@@ -1,10 +1,11 @@
-import randomstring from "randomstring";
-import banking_accountModel from "./banking_account.model.js";
+import randomString from "randomstring";
+import banking_accountModel from "../models/banking-account.model.js";
 import numeral from 'numeral'
 
 export function balanceToInt(value){
     return parseInt(value.replaceAll(',',''))
 }
+
 export function generateContent(fullname, username, email, password, account, balance){
     const content = "" +
         `Dear, ${fullname}\n` +
@@ -19,6 +20,7 @@ export function generateContent(fullname, username, email, password, account, ba
         `\nPlease be aware that you only accept email from Solar Banking base on your registration by your email: ${email}`
     return content
 }
+
 export function generateTransfer(fullname, account, amount, balance, message, email){
     const content = "" +
         `Dear, ${fullname}\n` +
@@ -31,14 +33,15 @@ export function generateTransfer(fullname, account, amount, balance, message, em
         `\nPlease be aware that you only accept email from Solar Banking base on your registration by your email: ${email}`
     return content
 }
+
 export async function generateAccount(){
     var account = ""
     while(true){
-        account = randomstring.generate({
+        account = randomString.generate({
             length: 8,
             charset: 'numeric'
         });
-        const isExisted = await banking_accountModel.isExist(account)
+        const isExisted = await banking_accountModel.genericMethods.isExist(account)
         if (isExisted == false)
             break
     }

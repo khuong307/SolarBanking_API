@@ -1,33 +1,38 @@
 import express from 'express';
 import bcrypt from 'bcrypt'
-import userModel from "../models/employee_service/user.model.js";
-import userAccountModel from "../models/employee_service/userAccount.model.js";
-import banking_accountModel from "../models/employee_service/banking_account.model.js";
-import transactionModel from "../models/employee_service/transaction.model.js";
-import mail from "../utils/mail.js";
-import {balanceToInt, generateContent, generateAccount, generateTransfer} from '../models/employee_service/support_function.model.js'
 import { readFile } from 'fs/promises';
+import * as dotenv from "dotenv";
+
+import userModel from "../models/user.model.js";
+import userAccountModel from "../models/user-account.model.js";
+import banking_accountModel from "../models/banking-account.model.js";
+import transactionModel from "../models/transaction.model.js";
+import mail from "../utils/mail.js";
+import role from '../utils/role.js';
+import {balanceToInt, generateContent, generateAccount, generateTransfer} from '../utils/bank.js'
+import validate from '../middlewares/validate.mdw.js';
+import {authRole, authUser} from "../middlewares/auth.mdw.js";
+
+dotenv.config();
+
 const newCustomerSchema = JSON.parse(await readFile(new URL('../schemas/new_customer.json', import.meta.url)));
 const customerListSchema = JSON.parse(await readFile(new URL('../schemas/customer_list.json', import.meta.url)))
 const transferEmployee = JSON.parse(await readFile(new URL('../schemas/employee_transfer.json', import.meta.url)))
-import validate from '../middlewares/validate.mdw.js';
-import * as dotenv from "dotenv";
-import {parse} from "dotenv";
-dotenv.config();
 
 const router = express.Router();
-router.get('/customer/:accessInfo', async function (req, res) {
-    const {accessInfo} = req.params
-    const isBankAccount = await banking_accountModel.findByCol("account_number", accessInfo)
-    const isUsername = await  userAccountModel.findByCol("username", accessInfo)
 
-    const bankAccountInfo = isBankAccount != null?
-        isBankAccount: isUsername != null?
-            await banking_accountModel.findByCol("user_id",isUsername.user_id):
+router.get('/customer/:accessInfo', authUser, authRole(role.EMPLOYEE), async function (req, res) {
+    const {accessInfo} = req.params
+    const isBankAccount = await banking_accountModel.genericMethods.findByCol("account_number", accessInfo)
+    const isUsername = await userAccountModel.genericMethods.findByCol("username", accessInfo)
+
+    const bankAccountInfo = isBankAccount != null ?
+        isBankAccount: isUsername != null ?
+            await banking_accountModel.genericMethods.findByCol("user_id", isUsername.user_id) :
             null
 
     if (bankAccountInfo != null){
-        const userInfo = await userModel.findById(bankAccountInfo.user_id)
+        const userInfo = await userModel.genericMethods.findById(bankAccountInfo.user_id)
         const customer_info = {
             full_name: userInfo.full_name,
             email: userInfo.email,
@@ -42,21 +47,20 @@ router.get('/customer/:accessInfo', async function (req, res) {
         })
     }
 
-
     return res.status(209).json({
         isFound: false,
         message: "Account number does not exist!"
     })
 
 });
-router.post('/customer/:account_number', validate(transferEmployee), async function (req, res) {
+router.post('/customer/:account_number', validate(transferEmployee), authUser, authRole(role.EMPLOYEE), async function (req, res) {
     const {account_number} = req.params
     const amount = parseInt(req.body.amount.replaceAll(',',''))
     const message = req.body.message
-    const bankAccountInfo = await banking_accountModel.findByCol("account_number", account_number)
+    const bankAccountInfo = await banking_accountModel.genericMethods.findByCol("account_number", account_number)
     if (bankAccountInfo != null){
         bankAccountInfo.balance += amount
-        await banking_accountModel.update(bankAccountInfo)
+        await banking_accountModel.genericMethods.update(account_number, bankAccountInfo)
 
         //save transfer
         const newRecord = {
@@ -69,9 +73,9 @@ router.post('/customer/:account_number', validate(transferEmployee), async funct
             is_success: true,
             transaction_type: 1
         }
-        await transactionModel.add(newRecord)
+        await transactionModel.genericMethods.add(newRecord)
 
-        const customer_info = await userModel.findById(bankAccountInfo.user_id)
+        const customer_info = await userModel.genericMethods.findById(bankAccountInfo.user_id)
         const email_content = generateTransfer(customer_info.full_name, account_number, req.body.amount,bankAccountInfo.balance, message,  customer_info.email)
         mail(customer_info.email, "[SOLAR BANKING] [Transaction Information]", email_content)
         return res.status(200).json({
@@ -95,10 +99,10 @@ router.post('/customer/:account_number', validate(transferEmployee), async funct
 });
 
 
-router.post('/customer', validate(newCustomerSchema), async function (req, res) {
+router.post('/customer', validate(newCustomerSchema), authUser, authRole(role.EMPLOYEE), async function (req, res) {
     const {full_name, email, phone, username, password, spend_account, initial_balance } = req.body
-    const isEmailExisted = await userModel.isExistedByCol("email", email)
-    const isUsernameExited = await userAccountModel.isExistedByCol("username", username)
+    const isEmailExisted = await userModel.genericMethods.isExistedByCol("email", email)
+    const isUsernameExited = await userAccountModel.genericMethods.isExistedByCol("username", username)
     if(isEmailExisted == true || isUsernameExited == true){
         res.status(409).json({
           success: false,
@@ -112,10 +116,10 @@ router.post('/customer', validate(newCustomerSchema), async function (req, res) 
         const newBankingAccount = {account_number: spend_account, balance: balanceToInt(initial_balance), bank_code: "SLB"}
 
         //add to new Database
-        newUserAccount.user_id = await userModel.add(newUser)
+        newUserAccount.user_id = await userModel.genericMethods.add(newUser)
         newBankingAccount.user_id = newUserAccount.user_id
-        await userAccountModel.add(newUserAccount)
-        await banking_accountModel.add(newBankingAccount)
+        await userAccountModel.genericMethods.add(newUserAccount)
+        await banking_accountModel.genericMethods.add(newBankingAccount)
 
         const email_content = generateContent(full_name, username, email, password, spend_account, initial_balance)
         mail(email, "[SOLAR BANKING] [CUSTOMER INFORMATION]", email_content)
@@ -134,8 +138,7 @@ router.post('/customer', validate(newCustomerSchema), async function (req, res) 
     }
 });
 
-
-router.post('/customers', validate(customerListSchema), async function (req, res) {
+router.post('/customers', validate(customerListSchema), authUser, authRole(role.EMPLOYEE), async function (req, res) {
     const successArray = []
     const failArray = []
     let countS = 0
@@ -143,8 +146,8 @@ router.post('/customers', validate(customerListSchema), async function (req, res
 
     for (const customer of req.body){
         const {full_name, email, phone, username, password, initial_balance } = customer
-        const isEmailExisted = await userModel.isExistedByCol("email", email)
-        const isUsernameExited = await userAccountModel.isExistedByCol("username", username)
+        const isEmailExisted = await userModel.genericMethods.isExistedByCol("email", email)
+        const isUsernameExited = await userAccountModel.genericMethods.isExistedByCol("username", username)
         if(isEmailExisted == true || isEmailExisted == true){
             failArray.push({
                 username,
@@ -161,10 +164,10 @@ router.post('/customers', validate(customerListSchema), async function (req, res
             const newBankingAccount = {account_number: spend_account, balance: balanceToInt(initial_balance), bank_code: "SLB"}
 
             //add to new Database
-            newUserAccount.user_id = await userModel.add(newUser)
+            newUserAccount.user_id = await userModel.genericMethods.add(newUser)
             newBankingAccount.user_id = newUserAccount.user_id
-            await userAccountModel.add(newUserAccount)
-            await banking_accountModel.add(newBankingAccount)
+            await userAccountModel.genericMethods.add(newUserAccount)
+            await banking_accountModel.genericMethods.add(newBankingAccount)
             //send -email
             const email_content = generateContent(full_name, username, email, password, spend_account, initial_balance)
             mail(email, "[SOLAR BANKING] [CUSTOMER INFORMATION]", email_content)
@@ -181,7 +184,8 @@ router.post('/customers', validate(customerListSchema), async function (req, res
         fail_array: failArray,
     })
 });
-router.get('/bank_account', async function(req, res){
+
+router.get('/bank_account', authUser, authRole(role.EMPLOYEE), async function(req, res){
     var account = await generateAccount()
     res.status(200).json({
         success: true,
