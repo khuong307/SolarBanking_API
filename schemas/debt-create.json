@@ -32,7 +32,8 @@
   "required": [
     "user_id",
     "debt_account_number",
-    "debt_amount"
+    "debt_amount",
+    "debt_message"
   ],
   "additionalProperties": false
 }
