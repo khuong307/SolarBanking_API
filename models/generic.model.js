@@ -17,17 +17,25 @@ export default function (tableName, idField) {
         },
 
         delete(id) {
-            return db(tableName).where(idField, id).del();
+            return db(tableName).where(idField, id).del()
         },
 
         async findById(id) {
-            const ans = await db(tableName).where(idField, id).select();
-            return ans.length > 0 ? ans[0] : null;
+            const ans = await db(tableName).where(idField, id).select()
+            return ans.length > 0 ? ans[0] : null
         },
 
         async isExist(id) {
-            const ans = await db(tableName).where(idField, id);
-            return ans.length !== 0;
+            const ans = await db(tableName).where(idField, id)
+            return ans.length == 0 ? false : true
+        },
+        async isExistedByCol(col, value) {
+            const ans = await db(tableName).where(col,value)
+            return ans.length == 0 ? false : true
+        },
+        async findByCol(col, value) {
+            const ans = await db(tableName).where(col,value)
+            return ans.length == 0 ? null : ans[0]
         }
     }
 }

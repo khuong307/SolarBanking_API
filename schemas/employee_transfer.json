@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "properties": {
+    "account_number": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    }
+  },
+  "required": ["account_number", "amount", "message"],
+  "additionalProperties": false
+}

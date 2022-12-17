@@ -1,0 +1,30 @@
+{
+  "type": "object",
+  "properties": {
+    "full_name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "username": {
+      "type": "string"
+    },
+    "password": {
+      "type": "string"
+    },
+    "spend_account": {
+      "type": "string"
+    },
+    "initial_balance": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "full_name", "email", "phone", "username", "password", "spend_account", "initial_balance"
+  ],
+  "additionalProperties": true
+}

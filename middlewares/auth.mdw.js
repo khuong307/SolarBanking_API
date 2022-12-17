@@ -48,7 +48,7 @@ export function authRole(role) {
     return async function (req, res, next) {
         const userId = req.body.user_id || req.params.userId;
         const account = await userAccountModel.findByUserId(userId);
-        const userType = await userTypeModel.findById(account.user_type_id);
+        const userType = await userTypeModel.genericMethods.findById(account.user_type_id);
 
         if (role !== userType.user_type_name)
             return res.status(403).json({

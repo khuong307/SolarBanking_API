@@ -5,6 +5,7 @@ dotenv.config();
 import express from 'express';
 import morgan from 'morgan';
 import asyncError from 'express-async-errors';
+import cors from 'cors'
 import swaggerUI from 'swagger-ui-express';
 import swaggerJsDoc from 'swagger-jsdoc';
 import {swaggerConfigOptions} from './utils/swagger.js';
@@ -12,10 +13,13 @@ import {swaggerConfigOptions} from './utils/swagger.js';
 import userAccountRoute from './routes/user-account.route.js';
 import userRoute from './routes/user.route.js';
 import debtListRoute from "./routes/debt-list.route.js";
+import employeeRoute from "./routes/employee.route.js";
 
 const app = express();
 app.use(express.json());
 app.use(morgan('dev'));
+app.use(cors())
+
 
 const specs = swaggerJsDoc(swaggerConfigOptions);
 app.use(
@@ -25,6 +29,7 @@ app.use(
 app.use('/api/accounts', userAccountRoute);
 app.use('/api/users', userRoute);
 app.use('/api/debtList', debtListRoute);
+app.use('/api/employee', employeeRoute);
 
 app.get('/err', function (req, res) {
     throw new Error('Error!');
