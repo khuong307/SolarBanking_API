@@ -20,7 +20,7 @@
       "type": "number"
     },
     "debt_status": {
-      "type": "enum"
+      "enum": ["PAID", "NOT PAID", "CANCEL"]
     },
     "debt_cancel_message": {
       "type": "string"

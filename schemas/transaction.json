@@ -1,0 +1,43 @@
+{
+  "type": "object",
+  "properties": {
+    "transaction_id": {
+      "type": "number"
+    },
+    "src_account_number": {
+      "type": "string"
+    },
+    "des_account_number": {
+      "type": "string"
+    },
+    "transaction_amount": {
+      "type": "number"
+    },
+    "otp_code": {
+      "type": "string"
+    },
+    "transaction_message": {
+      "type": "number"
+    },
+    "pay_transaction_fee": {
+      "enum": ["SRC","DES"]
+    },
+    "is_success": {
+      "type": "number"
+    },
+    "transaction_created_at": {
+      "type": "string"
+    },
+    "transaction_type": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "src_account_number",
+    "des_account_number",
+    "transaction_amount",
+    "pay_transaction_fee",
+    "transaction_type"
+  ],
+  "additionalProperties": false
+}

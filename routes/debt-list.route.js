@@ -14,6 +14,7 @@ import debtListModel from "../models/debt-list.model.js";
 import notificationModel from "../models/notification.model.js";
 import bankingAccountModel from "../models/banking-account.model.js";
 import transactionsModel from "../models/transactions.model.js";
+import userModel from "../models/user.model.js";
 
 dotenv.config();
 
@@ -93,6 +94,61 @@ router.post("/",validate(debtCreateSchema),async function(req,res){
     }
 })
 
+//send OTP and create temp transaction API
+router.post("/sendotp",async function(req,res,next){
+    try{
+        const senderId = +req.body.user_id || 0;
+        const debtId = +req.body.debt_id || 0;
+        const otp = createOTP();
+        if(debtId > 0){
+            const debtInfo = await debtListModel.genericMethods.findById(debtId);
+            const recipientAccountNumber = debtInfo.debt_account_number;
+            const bankingInfoSender = await bankingAccountModel.findByUserId(senderId);
+            const recipientId = await bankingAccountModel.findUserIdByAccountNumber(recipientAccountNumber);
+            const recipientInfo = await userModel.genericMethods.findById(recipientId);
+            const emailRecipient = recipientInfo != null ? recipientInfo.email : '';
+            //Create transaction
+            let newTransaction = {
+                src_account_number: bankingInfoSender != null ? bankingInfoSender.debt_account_number : "",
+                des_account_number: recipientAccountNumber,
+                transaction_amount: debtInfo.debt_amount > 0 ? debtInfo.debt_amount : 0,
+                otp_code: otp,
+                transaction_message : '',
+                pay_transaction_fee: 'SRC',
+                is_success: 0,
+                transaction_type: 1
+            };
+            const ret = await transactionsModel.genericMethods.add(newTransaction);
+            //Template mail
+            const VERIFY_EMAIL_SUBJECT = 'Solar Banking: Please verify your payment';
+            const OTP_MESSAGE = `
+            Dear ${recipientInfo.full_name},\n
+            Here is the OTP code you need to verified payment: ${otp}.\n
+            This code will be expired 5 minutes after this email was sent. If you did not make this request, you can ignore this email.   
+            `;
+            sendEmail(emailRecipient, VERIFY_EMAIL_SUBJECT, OTP_MESSAGE);
+
+            const transactionId = ret[0];
+            //update transaction_id in debt table
+            await debtListModel.updateTransIdDebtPayment(debtId,transactionId);
+            res.status(200).json({
+                isSuccess: true,
+                message: "OTP code has been sent. Please check your email"
+            })
+        }
+        res.status(500).json({
+            isSuccess: false,
+            message: "Could not find this debt",
+        })
+
+    }catch (err){
+        res.status(400).json({
+            isSuccess: false,
+            message: err.message
+        })
+    }
+})
+
 //debt payment API
 router.post("/verified-payment",async function(req,res,next){
     try{
@@ -145,7 +201,7 @@ router.post("/verified-payment",async function(req,res,next){
 })
 
 //Cancel debt by debtId API
-router.delete("/delDebt/:debtId",validate(debtCancelSchema),async function(req,res,next){
+router.post("/cancelDebt/:debtId",validate(debtCancelSchema),async function(req,res,next){
     try {
         const _debtId = +req.params.debtId || 0;
         const _userId = +req.body.userId || 0;
