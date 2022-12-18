@@ -3,8 +3,11 @@ import generate from "./generic.model.js";
 const TABLE_NAME = 'debt_list';
 export default {
     genericMethods: generate(TABLE_NAME, 'debt_id'),
-    async listAll(userId,accountNumber){
-        return db(TABLE_NAME).where('user_id',userId).orWhere('debt_account_number',accountNumber).select();
+    async listSelfMade(userId){
+        return db(TABLE_NAME).where('user_id',userId).select();
+    },
+    async listOtherMade(accountNumber){
+        return db(TABLE_NAME).where('debt_account_number',accountNumber).select();
     },
     async getDebtById(debtId){
         const obj =  db(TABLE_NAME).where('debt_id',debtId).select();
@@ -28,4 +31,5 @@ export default {
                 paid_transaction_id: transId
             });
     }
+
 }
