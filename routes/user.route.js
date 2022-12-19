@@ -9,6 +9,9 @@ import userModel from '../models/user.model.js';
 import recipientModel from '../models/recipient.model.js';
 import bankModel from "../models/bank.model.js";
 import userAccountModel from "../models/user-account.model.js";
+import banking_accountModel from "../models/banking-account.model.js";
+import transactionModel from "../models/transaction.model.js";
+import {filterTransactionByTypeAndDes} from "../utils/bank.js";
 
 const userSchema = JSON.parse(await readFile(new URL('../schemas/user.json', import.meta.url)));
 const recipientSchema = JSON.parse(await readFile(new URL('../schemas/recipient.json', import.meta.url)));
@@ -188,4 +191,37 @@ router.delete('/:userId/recipients/:accountNumber', validateParams, authUser, au
     });
 });
 
+// Get list of transaction history
+router.get('/:userId/history', validateParams, authUser, authRole(role.CUSTOMER), async function(req, res) {
+    const userId = +req.params.userId;
+    const userInfo = await banking_accountModel.genericMethods.findByCol("user_id", userId)
+    if (userInfo == null){
+        return res.status(209).json({
+            isFound: false,
+            message: "User ID is invalid!"
+        })
+    }
+    else{
+        const accessInfo = userInfo.account_number
+        const chargeData = await transactionModel.genericMethods.findBy2ColMany("des_account_number", accessInfo, "src_account_number", "SLB")
+        const all_transaction = await transactionModel.genericMethods.findByColMany("src_account_number", accessInfo)
+        const transfer_list_by_customer = await filterTransactionByTypeAndDes(all_transaction, 1, 1,false)
+        const charge_by_SLB = await filterTransactionByTypeAndDes(chargeData, 1, 1, true)
+        const paid_debt_list = await filterTransactionByTypeAndDes(all_transaction, 2, false)
+
+        const received_list = await transactionModel.genericMethods.findByColMany("des_account_number", accessInfo)
+        const received_from_others = await filterTransactionByTypeAndDes(received_list, 1, 2, false)
+        const recevied_debt_list = await filterTransactionByTypeAndDes(received_list, 2, 2, false)
+
+        return res.status(200).json({
+            isFound: true,
+            transfer_list_by_customer,
+            paid_debt_list,
+            recevied_debt_list,
+            charge_by_SLB,
+            received_from_others,
+        })
+    }
+
+});
 export default router;
