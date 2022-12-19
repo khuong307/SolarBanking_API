@@ -3,7 +3,8 @@
   "name": "WNC02_SakilaAPI",
   "version": "1.0.0",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "dev": "nodemon app.js"
   },
   "dependencies": {
     "ajv": "^8.11.0",
@@ -22,5 +23,8 @@
     "randomstring": "^1.2.3",
     "swagger-jsdoc": "^6.2.5",
     "swagger-ui-express": "^4.5.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20"
   }
 }
