@@ -36,6 +36,14 @@ export default function (tableName, idField) {
         async findByCol(col, value) {
             const ans = await db(tableName).where(col,value)
             return ans.length == 0 ? null : ans[0]
+        },
+        async findByColMany(col, value) {
+            const ans = await db(tableName).where(col,value)
+            return ans.length == 0 ? null : ans
+        },
+        async findBy2ColMany(col1, value1, col2, value2) {
+            const ans = await db(tableName).where(col1,value1).andWhere(col2, value2)
+            return ans.length == 0 ? null : ans
         }
     }
 }

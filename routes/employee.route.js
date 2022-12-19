@@ -9,7 +9,13 @@ import banking_accountModel from "../models/banking-account.model.js";
 import transactionModel from "../models/transaction.model.js";
 import mail from "../utils/mail.js";
 import role from '../utils/role.js';
-import {balanceToInt, generateContent, generateAccount, generateTransfer} from '../utils/bank.js'
+import {
+    balanceToInt,
+    generateContent,
+    generateAccount,
+    generateTransfer,
+    filterTransactionByTypeAndDes
+} from '../utils/bank.js'
 import validate from '../middlewares/validate.mdw.js';
 import {authRole, authUser} from "../middlewares/auth.mdw.js";
 import notificationModel from "../models/notification.model.js";
@@ -54,7 +60,7 @@ router.get('/customer/:accessInfo', authUser, authRole(role.EMPLOYEE), async fun
     })
 
 });
-router.post('/customer/:account_number', validate(transferEmployee), authUser, authRole(role.EMPLOYEE), async function (req, res) {
+router.post('/customer/:account_number',authUser, authRole(role.EMPLOYEE), validate(transferEmployee), async function (req, res) {
     const {account_number} = req.params
     const amount = parseInt(req.body.amount.replaceAll(',',''))
     const message = req.body.message
@@ -107,9 +113,7 @@ router.post('/customer/:account_number', validate(transferEmployee), authUser, a
     })
 
 });
-
-
-router.post('/customer', validate(newCustomerSchema), authUser, authRole(role.EMPLOYEE), async function (req, res) {
+router.post('/customer', authUser, authRole(role.EMPLOYEE),validate(newCustomerSchema), async function (req, res) {
     const {full_name, email, phone, username, password, spend_account, initial_balance } = req.body
     const isEmailExisted = await userModel.genericMethods.isExistedByCol("email", email)
     const isUsernameExited = await userAccountModel.genericMethods.isExistedByCol("username", username)
@@ -147,8 +151,7 @@ router.post('/customer', validate(newCustomerSchema), authUser, authRole(role.EM
         })
     }
 });
-
-router.post('/customers', validate(customerListSchema), authUser, authRole(role.EMPLOYEE), async function (req, res) {
+router.post('/customers', authUser, authRole(role.EMPLOYEE),validate(customerListSchema), async function (req, res) {
     const successArray = []
     const failArray = []
     let countS = 0
@@ -158,7 +161,7 @@ router.post('/customers', validate(customerListSchema), authUser, authRole(role.
         const {full_name, email, phone, username, password, initial_balance } = customer
         const isEmailExisted = await userModel.genericMethods.isExistedByCol("email", email)
         const isUsernameExited = await userAccountModel.genericMethods.isExistedByCol("username", username)
-        if(isEmailExisted == true || isEmailExisted == true){
+        if(isEmailExisted == true || isUsernameExited == true){
             failArray.push({
                 username,
                 email,
@@ -194,13 +197,50 @@ router.post('/customers', validate(customerListSchema), authUser, authRole(role.
         fail_array: failArray,
     })
 });
-
 router.get('/bank_account', authUser, authRole(role.EMPLOYEE), async function(req, res){
     var account = await generateAccount()
     res.status(200).json({
         success: true,
         spend_account: account
     })
+})
+
+//transaction
+router.get('/customer/transactions/:accessInfo', authUser, authRole(role.EMPLOYEE), async function(req, res){
+    const paraData = req.params.accessInfo
+    const isBankAccount = await banking_accountModel.genericMethods.findByCol("account_number", paraData)
+    const isUsername = await userAccountModel.genericMethods.findByCol("username", paraData)
+    const bankAccountInfo = isBankAccount != null ?
+        isBankAccount: isUsername != null ?
+            await banking_accountModel.genericMethods.findByCol("user_id", isUsername.user_id) :
+            null
+    if (bankAccountInfo == null){
+        return res.status(209).json({
+            isFound: false,
+            message: "Not found this customer base on account number or username!"
+        })
+    }else{
+        const accessInfo = bankAccountInfo.account_number
+        const chargeData = await transactionModel.genericMethods.findBy2ColMany("des_account_number", accessInfo, "src_account_number", "SLB")
+        const all_transaction = await transactionModel.genericMethods.findByColMany("src_account_number", accessInfo)
+        const transfer_list_by_customer = await filterTransactionByTypeAndDes(all_transaction, 1, 1,false)
+        const charge_by_SLB = await filterTransactionByTypeAndDes(chargeData, 1, 1, true)
+        const paid_debt_list = await filterTransactionByTypeAndDes(all_transaction, 2, false)
+
+        const received_list = await transactionModel.genericMethods.findByColMany("des_account_number", accessInfo)
+        const received_from_others = await filterTransactionByTypeAndDes(received_list, 1, 2, false)
+        const recevied_debt_list = await filterTransactionByTypeAndDes(received_list, 2, 2, false)
+
+        return res.status(200).json({
+            isFound: true,
+            transfer_list_by_customer,
+            paid_debt_list,
+            recevied_debt_list,
+            charge_by_SLB,
+            received_from_others,
+        })
+    }
+
 })
 
 export default router;
