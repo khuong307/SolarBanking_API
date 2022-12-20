@@ -49,5 +49,13 @@ export default {
             return amount <= obj[0].balance;
         }
         return false;
+    },
+
+    findByUserIdAndAccountNumber(userId,accountNumber){
+        return db('banking_account').where('account_number',accountNumber).andWhere('user_id',userId).select()
+    },
+
+    findByAccountNumberAndBankCode(accountNumber,bankCode){
+        return db('banking_account').where('account_number',accountNumber).andWhere('bank_code',bankCode).select()
     }
 };

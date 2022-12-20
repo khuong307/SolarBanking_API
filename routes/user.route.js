@@ -69,7 +69,7 @@ router.put('/:userId', validateParams, validate(userSchema), authUser, authRole(
 });
 
 // Get recipient list by user id API
-router.get('/:userId/recipients', validateParams, authUser, authRole(role.CUSTOMER), async function(req, res) {
+router.get('/:userId/recipients',validateParams, authUser, authRole(role.CUSTOMER), async function(req, res) {
     const userId = +req.params.userId;
     const recipients = await recipientModel.findByUserId(userId);
 

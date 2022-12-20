@@ -32,10 +32,4 @@ export default {
             account_number: accountNumber
         }).del();
     },
-
-    getAllRecipientBankList(userId){
-        return db('recipient_list').join('banking_account','recipient_list.account_number','=','banking_account.account_number')
-        .where({"recipient_list.user_id":userId})
-        .select("recipient_list.account_number","recipient_list.nick_name","banking_account.bank_code")
-    }
 };
