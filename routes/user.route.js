@@ -45,7 +45,7 @@ router.get('/:userId/spendAccounts', validateParams, authUser, authRole(role.CUS
 });
 
 // Get info of user by id API
-router.get('/:userId', validateParams, authUser, authRole(role.CUSTOMER), async function(req, res) {
+router.get('/:userId', validateParams, authUser,  async function(req, res) {
     const userId = +req.params.userId;
     const user = await userModel.genericMethods.findById(userId);
 

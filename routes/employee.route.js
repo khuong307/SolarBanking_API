@@ -60,7 +60,7 @@ router.get('/customer/:accessInfo', authUser, authRole(role.EMPLOYEE), async fun
     })
 
 });
-router.post('/customer/:account_number',authUser, authRole(role.EMPLOYEE), validate(transferEmployee), async function (req, res) {
+router.post('/customer/:account_number',  authUser, authRole(role.EMPLOYEE), validate(transferEmployee), async function (req, res) {
     const {account_number} = req.params
     const amount = parseInt(req.body.amount.replaceAll(',',''))
     const message = req.body.message
@@ -113,7 +113,7 @@ router.post('/customer/:account_number',authUser, authRole(role.EMPLOYEE), valid
     })
 
 });
-router.post('/customer', authUser, authRole(role.EMPLOYEE),validate(newCustomerSchema), async function (req, res) {
+router.post('/customer',authUser, authRole(role.EMPLOYEE),validate(newCustomerSchema), async function (req, res) {
     const {full_name, email, phone, username, password, spend_account, initial_balance } = req.body
     const isEmailExisted = await userModel.genericMethods.isExistedByCol("email", email)
     const isUsernameExited = await userAccountModel.genericMethods.isExistedByCol("username", username)
@@ -151,7 +151,7 @@ router.post('/customer', authUser, authRole(role.EMPLOYEE),validate(newCustomerS
         })
     }
 });
-router.post('/customers', authUser, authRole(role.EMPLOYEE),validate(customerListSchema), async function (req, res) {
+router.post('/customers',authUser, authRole(role.EMPLOYEE), validate(customerListSchema), async function (req, res) {
     const successArray = []
     const failArray = []
     let countS = 0
@@ -197,7 +197,7 @@ router.post('/customers', authUser, authRole(role.EMPLOYEE),validate(customerLis
         fail_array: failArray,
     })
 });
-router.get('/bank_account', authUser, authRole(role.EMPLOYEE), async function(req, res){
+router.get('/bank_account' ,authUser, authRole(role.EMPLOYEE),  async function(req, res){
     var account = await generateAccount()
     res.status(200).json({
         success: true,

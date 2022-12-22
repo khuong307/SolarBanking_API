@@ -46,11 +46,14 @@ export async function authUser(req, res, next) {
 
 export function authRole(role) {
     return async function (req, res, next) {
-        const userId = req.body.user_id || req.params.userId;
+        var userId = req.body.user_id || req.params.userId;
+        if (userId == undefined){
+            userId = req.headers.user_id
+        }
         const account = await userAccountModel.findByUserId(userId);
         const userType = await userTypeModel.genericMethods.findById(account.user_type_id);
 
-        if (role !== userType.user_type_name)
+        if (role != userType.user_type_name)
             return res.status(403).json({
                 message: 'Not allowed user!'
             });
