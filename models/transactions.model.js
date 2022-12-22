@@ -16,5 +16,5 @@ export default {
                 is_success: 1,
                 transaction_created_at: moment().toDate()
             });
-    }
+    },
 };
