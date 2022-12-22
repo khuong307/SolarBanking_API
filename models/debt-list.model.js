@@ -1,19 +1,20 @@
 import db from '../utils/db.js';
 import generate from "./generic.model.js";
+
 const TABLE_NAME = 'debt_list';
 export default {
     genericMethods: generate(TABLE_NAME, 'debt_id'),
-    async listSelfMade(userId){
+    listSelfMade(userId){
         return db(TABLE_NAME).where('user_id',userId).select();
     },
-    async listOtherMade(accountNumber){
-        return db(TABLE_NAME).where('debt_account_number',accountNumber).select();
+    listOtherMade(accountNumber){
+        return db(TABLE_NAME).where('debt_account_number', accountNumber).select();
     },
     async getDebtById(debtId){
-        const obj =  db(TABLE_NAME).where('debt_id',debtId).select();
+        const obj =  await db(TABLE_NAME).where('debt_id',debtId).select();
         return obj.length > 0 ? obj[0] : null;
     },
-    async updateStatusDebtPayment(debtId,status){
+    updateStatusDebtPayment(debtId,status){
         return db(TABLE_NAME)
             .where({
                 debt_id: debtId
@@ -22,7 +23,7 @@ export default {
                 debt_status: status
             });
     },
-    async updateTransIdDebtPayment(debtId,transId){
+    updateTransIdDebtPayment(debtId,transId){
         return db(TABLE_NAME)
             .where({
                 debt_id: debtId

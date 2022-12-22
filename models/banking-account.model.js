@@ -16,17 +16,16 @@ export default {
             is_spend_account: accountType
         }).select();
     },
-    async getInfoRecipientBy(account_number){
-        const res = db('banking_account').where('account_number',account_number)
+    getInfoRecipientBy(account_number){
+        return db('banking_account').where('account_number',account_number)
             .join('user','account_number.user_id','=','user.user_id')
             .select('user.user_id',
                     'user.full_name',
                     'user.email',
-                    'banking_account.balance')
-        return res;
+                    'banking_account.balance');
     },
     async updateAccountBalance(accountNumber,amount,type){
-        const obj = db('banking_account').where('account_number',accountNumber)
+        const obj = await db('banking_account').where('account_number',accountNumber)
                                          .orWhere('user_id',accountNumber).select();
         let balance
         if (obj.length > 0){
@@ -38,13 +37,13 @@ export default {
             else{
                 balance = parseInt(obj[0].balance + amount);
             }
-            db('banking_account').where('account_number',accountNumber).update('balance',balance);
+            await db('banking_account').where('account_number',accountNumber).update('balance',balance);
             return true;
         }
         return false;
     },
     async checkBalanceOfUserByAccountNumber (accountNumber,amount){
-        const obj = db('banking_account').where('account_number',accountNumber).select();
+        const obj = await db('banking_account').where('account_number',accountNumber).select();
         if (obj.length > 0){
             return amount <= obj[0].balance;
         }

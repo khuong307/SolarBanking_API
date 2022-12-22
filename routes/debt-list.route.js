@@ -66,15 +66,13 @@ router.get("/selfMade",authRole(role.CUSTOMER),async function(req,res){
         //get userid from body
         const _userId = +req.body.user_id || 0;
         const _user = await userModel.genericMethods.findById(_userId);
-        if (_user !== null){
-            const listDebt = await debtListModel.listSelfMade(_userId);
-            if (listDebt.count > 0){
-                res.status(200).json({
-                    isSuccess: true,
-                    message: "This is all debts of you",
-                    list_debt: listDebt
-                })
-            }
+        if (_user != null){
+            const listDebt = debtListModel.listSelfMade(_userId);
+            res.status(200).json({
+                isSuccess: true,
+                message: "This is all debts of you",
+                list_debt: listDebt
+            })
         }
         else{
             res.status(500).json({
@@ -96,17 +94,15 @@ router.get("/otherMade",authRole(role.CUSTOMER),async function(req,res){
     try{
         //get userid from body
         const _userId = +req.body.user_id || 0;
-        const _userBanking = await  bankingAccountModel.findByUserId(_userId);
-        if (_userBanking !== null){
+        const _userBanking = await bankingAccountModel.findByUserId(_userId);
+        if (_userBanking != null){
             const userAccountNumber = _userBanking[0].account_number;
-            const listDebt = await debtListModel.listOtherMade(userAccountNumber);
-            if (listDebt.count > 0){
-                res.status(200).json({
-                    isSuccess: true,
-                    message: "This is all debts of you",
-                    list_debt: listDebt
-                })
-            }
+            const listDebt = debtListModel.listOtherMade(userAccountNumber);
+            res.status(200).json({
+                isSuccess: true,
+                message: "This is all debts of you",
+                list_debt: listDebt
+            })
         }
         else{
             res.status(500).json({
@@ -167,14 +163,14 @@ router.post("/",validate(debtCreateSchema),authRole(role.CUSTOMER),async functio
             }
             //Create new debt
             const ret = await debtListModel.genericMethods.add(newDebt);
-            const recipientIndo = await bankingAccountModel.getInfoRecipientBy(debt_account_number);
+            const recipientIndo = bankingAccountModel.getInfoRecipientBy(debt_account_number);
 
             //Send mail for recipient
             const VERIFY_EMAIL_SUBJECT = 'Solar Banking: You have new debt';
             const OTP_MESSAGE = `
-            Dear ${recipientIndo.full_name},\n
+            Dear ${recipientIndo[0].full_name},\n
             We've noted you have a payment reminder. Debit code is: ${ret[0]}.`;
-            sendEmail(recipientIndo.email, VERIFY_EMAIL_SUBJECT, OTP_MESSAGE);
+            sendEmail(recipientIndo[0].email, VERIFY_EMAIL_SUBJECT, OTP_MESSAGE);
 
             res.status(200).json({
                 isSuccess: true,
@@ -202,8 +198,8 @@ router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
         const debtInfo = await debtListModel.genericMethods.findById(debtId);
         if(debtInfo != null){
             const debtorAccountNumber = debtInfo.debt_account_number;
-            const bankingInfoSender = await bankingAccountModel.findByUserId(senderId);
-            const debtorInfo = await bankingAccountModel.getInfoRecipientBy(debtorAccountNumber);
+            const bankingInfoSender = bankingAccountModel.findByUserId(senderId);
+            const debtorInfo = bankingAccountModel.getInfoRecipientBy(debtorAccountNumber);
             const emailDebtor = debtorInfo != null ? debtorInfo.email : '';
             const nameDebtor = debtorInfo != null ? debtorInfo.full_name : '';
             const balanceDebtor = debtorInfo != null ? debtorInfo.balance : 0;
@@ -225,7 +221,7 @@ router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
                 is_success: 0,
                 transaction_type: 1
             };
-            const ret = await transactionsModel.genericMethods.add(newTransaction);
+            const ret = transactionsModel.genericMethods.add(newTransaction);
             //Template mail
             const VERIFY_EMAIL_SUBJECT = 'Solar Banking: Please verify your payment';
             const OTP_MESSAGE = `
@@ -237,7 +233,7 @@ router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
 
             const transactionId = ret[0];
             //update transaction_id in debt table
-            await debtListModel.updateTransIdDebtPayment(debtId,transactionId);
+            debtListModel.updateTransIdDebtPayment(debtId,transactionId);
             res.status(200).json({
                 isSuccess: true,
                 message: "OTP code has been sent. Please check your email"
@@ -271,9 +267,9 @@ router.post("/internal/verified-payment",authRole(role.CUSTOMER),async function(
             //Step 1: Verified OTP code
             if (_otp === transDetail.otp_code && moment().isBefore(transDetail.transaction_created_at)){
                 //Step 2: Update status for debt detail
-                await debtListModel.updateStatusDebtPayment(_debtId,debt_status.PAID);
+                debtListModel.updateStatusDebtPayment(_debtId,debt_status.PAID);
                 //Step 3: Update status of transaction
-                await transactionsModel.updateStatusTransaction(transId,1);
+                transactionsModel.updateStatusTransaction(transId,1);
                 //Step 4.1: Update account balance of debtor
                 await bankingAccountModel.updateAccountBalance(recipientAccount,debt_amount,1);
                 //Step 4.2: Update account balance of debt reminder
@@ -333,7 +329,7 @@ router.post("/cancelDebt/:debtId",validate(debtCancelSchema),authRole(role.CUSTO
                     is_seen: 0
                 };
                 //add new notification
-                await notificationModel.genericMethods.add(newNotify);
+                notificationModel.genericMethods.add(newNotify);
             }
             else{
                 //if cancel debt of another
@@ -349,9 +345,9 @@ router.post("/cancelDebt/:debtId",validate(debtCancelSchema),authRole(role.CUSTO
                     is_seen: 0
                 };
                 //add new notification
-                await notificationModel.genericMethods.add(newNotify);
+                notificationModel.genericMethods.add(newNotify);
             }
-            const result = await debtListModel.updateStatusDebtPayment(_debtId,debt_status.CANCEL);
+            const result = debtListModel.updateStatusDebtPayment(_debtId,debt_status.CANCEL);
 
             res.status(200).json({
                 isSuccess: true,
