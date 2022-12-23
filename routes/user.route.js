@@ -41,7 +41,7 @@ router.get('/:userId/spendAccounts', validateParams, authUser, authRole(role.CUS
     const SAVING_ACCOUNT_TYPE = 1;
     const accounts = await bankingAccountModel.findByUserIdAndAccountType(userId, SAVING_ACCOUNT_TYPE);
 
-    return res.json(accounts[0]);
+    return res.json(accounts);
 });
 
 // Get info of user by id API
