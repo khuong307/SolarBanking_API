@@ -40,6 +40,16 @@ export async function authUser(req, res, next) {
                 message: 'Unauthorized user'
             });
     }
+    else {
+        tokenInfo = await jwt.decodeToken(accessToken, secretKey);
+        const username = tokenInfo.payload;
+        const account = await userAccountModel.genericMethods.findById(username);
+
+        if (moment().isAfter(account['last_expired_at']))
+            return res.status(401).json({
+                message: 'Unauthorized user'
+            });
+    }
 
     next();
 }
