@@ -165,6 +165,7 @@ router.post("/intratransaction/:id", async (req, res) => {
         const diff = datetime_func.diff_minutes(otpSendTime, otpCreatedTime)
         // Otp failed or time valid for otp is expired 
         if (otpInfo.otpCode !== dataTransaction.otp_code || diff > 5) {
+            console.log("hello")
             return res.status(403).json({
                 isSuccess: false,
                 message: "Transaction failed! OTP Code is expired"
@@ -231,10 +232,11 @@ router.post("/intratransaction/:id", async (req, res) => {
             bank: "SOLAR BANKING",
             des_account_number: desBankAccount.account_number,
             transaction_amount: dataTransaction.transaction_amount,
-            trasaction_message: dataTransaction.trasaction_message,
-            transfer_fee: TRANSFER_FEE,
+            transaction_message: dataTransaction.transaction_message,
+            transaction_fee: TRANSFER_FEE,
             total: TRANSFER_FEE + dataTransaction.transaction_amount
         }
+
         // Send to client inform transaction success
         return res.status(200).json({
             isSuccess: true,
