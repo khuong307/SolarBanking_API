@@ -309,7 +309,7 @@ router.post("/internal/verified-payment",authRole(role.CUSTOMER),async function(
 })
 
 //Cancel debt by debtId API: /api/debtList/cancelDebt/:debtId
-router.post("/cancelDebt/:debtId",validate(debtCancelSchema),authRole(role.CUSTOMER),async function(req,res,next){
+router.delete("/cancelDebt/:debtId",validate(debtCancelSchema),authRole(role.CUSTOMER),async function(req,res,next){
     try {
         const _debtId = +req.params.debtId || 0;
         const _userId = +req.body.user_id || 0;
