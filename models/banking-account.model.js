@@ -1,5 +1,6 @@
 import generate from './generic.model.js';
 import db from '../utils/db.js';
+import { BANK_CODE } from '../utils/bank_constanst.js';
 
 export default {
     genericMethods: generate('banking_account', 'account_number'),
@@ -56,5 +57,9 @@ export default {
 
     findByAccountNumberAndBankCode(accountNumber,bankCode){
         return db('banking_account').where('account_number',accountNumber).andWhere('bank_code',bankCode).select()
+    },
+    async findByUserIdAndBankCode(userId){
+        const res = await db('banking_account').where('user_id',userId).andWhere('bank_code',BANK_CODE).andWhere("is_spend_account",1).select()
+        return res.length !== 0 ? res[0] : null
     }
 };
