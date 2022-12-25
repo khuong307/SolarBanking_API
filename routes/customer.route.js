@@ -7,12 +7,11 @@ import transactionModel from "../models/transaction.model.js";
 import generateOtp from "../utils/otp.js"
 import generateEmail from "../utils/mail.js"
 import datetime_func from "../utils/datetime_func.js";
-import { TRANSFER_FEE } from "../utils/bank_fee.js";
+import { TRANSFER_FEE } from "../utils/bank_constanst.js";
 
 const router = express.Router()
 
-// Get Source bank ( render to select option in front end)
-router.get("/:userId/banks", validateParams, async (req, res) => {
+router.get("/:userId/bankaccounts", validateParams, async (req, res) => {
     const userId = +req.params.userId
     try {
         const bankAccounts = await bankingAccountModel.findByUserIdAndAccountType(userId, 1)
@@ -22,16 +21,40 @@ router.get("/:userId/banks", validateParams, async (req, res) => {
         })
     } catch (err) {
         console.log(err)
-        return res.status(500), json({
+        return res.status(500).json({
             isSuccess: false,
             message: "Can not get bank accounts"
         })
     }
 })
 
+router.get("/:userId/bankaccount",validateParams,async(req,res)=>{
+    const userId = +req.params.userId
+    try{
+        const bankAccount = await bankingAccountModel.findByUserIdAndBankCode(userId)
+        if(bankAccount === null){
+            return res.status(403).json({
+                isSuccess: false,
+                message: "Can not get bank account"
+            })
+        }
+        return res.status(200).json({
+            isSuccess: true,
+            bankAccount
+        })
+    }catch(err){
+        console.log(err)
+        return res.status(500).json({
+            isSuccess: false,
+            message: "Can not get bank account"
+        })
+    }
+})
+
 // FIrst step : Check Info Inter Transaction Before Real Transfer
-router.post("/:userId/intertransaction", validateParams, async (req, res) => {
+router.post("/:userId/intratransaction", validateParams, async (req, res) => {
     const infoTransaction = req.body
+    console.log(infoTransaction)
     const userId = +req.params.userId
     try {
         // Check src_account_number is existed (belong to userId)
@@ -66,7 +89,7 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
         return res.status(200).json({
             isSuccess: true,
             message: "Confirm transaction is valid",
-            infoTransaction: { ...infoTransaction, full_name: result_user_des.full_name }
+            infoTransaction: { ...infoTransaction, full_name: result_user_des.full_name,transaction_type:1}
         })
 
 
@@ -80,7 +103,7 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
 })
 
 // Second step: Confirm transaction after all info is correct
-router.post("/:userId/intertransaction/confirm", validateParams, async (req, res) => {
+router.post("/:userId/intratransaction/confirm", validateParams, async (req, res) => {
     const userId = +req.params.userId
     const infoTransaction = req.body
     try {
@@ -124,7 +147,7 @@ router.post("/:userId/intertransaction/confirm", validateParams, async (req, res
 })
 
 // Final Step: Valid OTP and Transaction completed
-router.post("/intertransaction/:id", async (req, res) => {
+router.post("/intratransaction/:id", async (req, res) => {
     const transactionId = req.params.id
     const otpInfo = req.body
     try {
@@ -142,6 +165,7 @@ router.post("/intertransaction/:id", async (req, res) => {
         const diff = datetime_func.diff_minutes(otpSendTime, otpCreatedTime)
         // Otp failed or time valid for otp is expired 
         if (otpInfo.otpCode !== dataTransaction.otp_code || diff > 5) {
+            console.log("hello")
             return res.status(403).json({
                 isSuccess: false,
                 message: "Transaction failed! OTP Code is expired"
@@ -208,10 +232,11 @@ router.post("/intertransaction/:id", async (req, res) => {
             bank: "SOLAR BANKING",
             des_account_number: desBankAccount.account_number,
             transaction_amount: dataTransaction.transaction_amount,
-            trasaction_message: dataTransaction.trasaction_message,
-            transfer_fee: TRANSFER_FEE,
+            transaction_message: dataTransaction.transaction_message,
+            transaction_fee: TRANSFER_FEE,
             total: TRANSFER_FEE + dataTransaction.transaction_amount
         }
+
         // Send to client inform transaction success
         return res.status(200).json({
             isSuccess: true,
