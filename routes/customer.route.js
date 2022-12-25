@@ -8,6 +8,7 @@ import generateOtp from "../utils/otp.js"
 import generateEmail from "../utils/mail.js"
 import datetime_func from "../utils/datetime_func.js";
 import { TRANSFER_FEE } from "../utils/bank_constanst.js";
+import { generateDesTransfer, generateOtpContentTransfer, generateSrcTransfer } from "../utils/bank.js";
 
 const router = express.Router()
 
@@ -28,11 +29,11 @@ router.get("/:userId/bankaccounts", validateParams, async (req, res) => {
     }
 })
 
-router.get("/:userId/bankaccount",validateParams,async(req,res)=>{
+router.get("/:userId/bankaccount", validateParams, async (req, res) => {
     const userId = +req.params.userId
-    try{
+    try {
         const bankAccount = await bankingAccountModel.findByUserIdAndBankCode(userId)
-        if(bankAccount === null){
+        if (bankAccount === null) {
             return res.status(403).json({
                 isSuccess: false,
                 message: "Can not get bank account"
@@ -42,7 +43,7 @@ router.get("/:userId/bankaccount",validateParams,async(req,res)=>{
             isSuccess: true,
             bankAccount
         })
-    }catch(err){
+    } catch (err) {
         console.log(err)
         return res.status(500).json({
             isSuccess: false,
@@ -89,7 +90,7 @@ router.post("/:userId/intratransaction", validateParams, async (req, res) => {
         return res.status(200).json({
             isSuccess: true,
             message: "Confirm transaction is valid",
-            infoTransaction: { ...infoTransaction, full_name: result_user_des.full_name,transaction_type:1}
+            infoTransaction: { ...infoTransaction, full_name: result_user_des.full_name, transaction_type: 1 }
         })
 
 
@@ -116,22 +117,21 @@ router.post("/:userId/intratransaction/confirm", validateParams, async (req, res
                 message: "Money transaction is invalid"
             })
         }
+
         // Generate otp
         const otp = generateOtp()
         // insert to table transaction but is_success will set false
         const newTransaction = { ...infoTransaction, otp_code: otp, is_success: false }
         const result = await transactionModel.genericMethods.add(newTransaction)
 
+        // Find source user by id
         const result_src = await userModel.genericMethods.findById(userId)
-        const src_email = result_src.email
 
         // Send otp to user through email
         const subject = "Transfer Money"
-        const message = `Dear ${result_src.full_name}. You have selected ${src_email} as your main verification page:
-        ${otp}\nThis code will expire three hours after this email was sent\nWhy you receive this email?\nSolar Banking requires verification whenever an transaction is made.
-        If you did not make this request, you can ignore this email`
+        const message = generateOtpContentTransfer(result_src.full_name, result_src.email, otp)
 
-        generateEmail(src_email, subject, message)
+        generateEmail(result_src.email, subject, message)
 
         return res.status(201).json({
             isSuccess: true,
@@ -165,7 +165,6 @@ router.post("/intratransaction/:id", async (req, res) => {
         const diff = datetime_func.diff_minutes(otpSendTime, otpCreatedTime)
         // Otp failed or time valid for otp is expired 
         if (otpInfo.otpCode !== dataTransaction.otp_code || diff > 5) {
-            console.log("hello")
             return res.status(403).json({
                 isSuccess: false,
                 message: "Transaction failed! OTP Code is expired"
@@ -188,7 +187,7 @@ router.post("/intratransaction/:id", async (req, res) => {
                 ...srcBankAccount,
                 balance: srcBankAccount.balance - TRANSFER_FEE - dataTransaction.transaction_amount
             }
-        }else{
+        } else {
             srcBankAccount = {
                 ...srcBankAccount,
                 balance: srcBankAccount.balance - dataTransaction.transaction_amount
@@ -208,23 +207,24 @@ router.post("/intratransaction/:id", async (req, res) => {
                 ...desBankAccount,
                 balance: desBankAccount.balance - TRANSFER_FEE + dataTransaction.transaction_amount
             }
-        }else{
+        } else {
             desBankAccount = {
                 ...desBankAccount,
-                balance: desBankAccount.balance  + dataTransaction.transaction_amount
+                balance: desBankAccount.balance + dataTransaction.transaction_amount
             }
         }
 
         // Update table Banking_account for balance updated
-        const resSrcUpdateBank = await bankingAccountModel.genericMethods.update(srcBankAccount.account_number, srcBankAccount)
-        const resDesUpdateBank = await bankingAccountModel.genericMethods.update(desBankAccount.account_number, desBankAccount)
+        await bankingAccountModel.genericMethods.update(srcBankAccount.account_number, srcBankAccount)
+        await bankingAccountModel.genericMethods.update(desBankAccount.account_number, desBankAccount)
 
         // Update status is_success true for transaction table
         const newDataTransaction = { ...dataTransaction, is_success: true }
-        const resTransaction = await transactionModel.genericMethods.update(transactionId, newDataTransaction)
+        await transactionModel.genericMethods.update(transactionId, newDataTransaction)
 
-        // Get info des_account
+        // Get info des_account and src_account
         const infoDesUser = await userModel.genericMethods.findById(desBankAccount.user_id)
+        const infoSrcUser = await userModel.genericMethods.findById(srcBankAccount.user_id)
 
         // Create info Transaction to send to client
         const infoTransaction = {
@@ -236,6 +236,17 @@ router.post("/intratransaction/:id", async (req, res) => {
             transaction_fee: TRANSFER_FEE,
             total: TRANSFER_FEE + dataTransaction.transaction_amount
         }
+
+        // Generate email send to src and des account_number
+        const subject = "Transfer Money"
+        const srcMessage = generateSrcTransfer(infoSrcUser.full_name, srcBankAccount.account_number
+            , dataTransaction.transaction_amount, srcBankAccount.balance, dataTransaction.transaction_message,
+            infoDesUser.email, dataTransaction.transaction_created_at)
+        const desMessage = generateDesTransfer(infoDesUser.full_name, desBankAccount.account_number,
+            dataTransaction.transaction_amount, desBankAccount.balance, dataTransaction.transaction_message,
+            desBankAccount.email, dataTransaction.transaction_created_at)
+        generateEmail(infoSrcUser.email, subject, srcMessage)
+        generateEmail(infoDesUser.email, subject, desMessage)
 
         // Send to client inform transaction success
         return res.status(200).json({
@@ -251,5 +262,52 @@ router.post("/intratransaction/:id", async (req, res) => {
         })
     }
 })
+
+
+router.post("/transaction/:id/otp", async (req, res) => {
+    const transactionId = req.params.id
+    try {
+        // Check transaction exist in database ( based on transactionId and not success)
+        const dataTransaction = await transactionModel.findTransactionNotSuccessById(transactionId)
+        if (dataTransaction === null) {
+            return res.status(403).json({
+                isSuccess: false,
+                message: "Transaction has already completed"
+            })
+        }
+
+        // Get full info of src and des account number
+        const result = await transactionModel.findInfoTransaction(transactionId)
+        if (result === null) {
+            return res.status(403).json({
+                isSuccess: false,
+                message: "OTP can not be renew"
+            })
+        }
+
+        const srcInfo = result[0]
+        // Generate otp
+        const otp = generateOtp()
+        // update new otp code to transaction_table
+        await transactionModel.genericMethods.update(transactionId, { ...dataTransaction, otp_code: otp })
+
+        // Send otp to user through email
+        const subject = "Transfer Money"
+        const message = generateOtpContentTransfer(srcInfo.full_name, srcInfo.email, otp)
+        generateEmail(srcInfo.email, subject, message)
+
+        return res.status(200).json({
+            isSuccess: true,
+            message: "OTP has been renew"
+        })
+    } catch (err) {
+        console.log(err)
+        return res.status(500).json({
+            isSuccess: false,
+            message: "OTP Can not be resend"
+        })
+    }
+})
+
 
 export default router
