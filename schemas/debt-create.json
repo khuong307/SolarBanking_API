@@ -27,21 +27,13 @@
     },
     "debt_created_at": {
       "type": "string"
-    },
-    "debt_user_name": {
-      "type": "string"
-    },
-    "debt_user_email": {
-      "type": "string"
     }
   },
   "required": [
     "user_id",
     "debt_account_number",
     "debt_amount",
-    "debt_message",
-    "debt_user_name",
-    "debt_user_email"
+    "debt_message"
   ],
   "additionalProperties": false
 }

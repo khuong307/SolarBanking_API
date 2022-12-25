@@ -61,10 +61,10 @@ const debtCancelSchema = JSON.parse(await readFile(new URL('../schemas/debt-canc
 const router = express.Router();
 
 //Get debt list of self-made by userId API: /api/debtList/selfMade
-router.get("/selfMade",authRole(role.CUSTOMER),async function(req,res){
+router.get("/:userId/selfMade",async function(req,res){
     try{
         //get userid from body
-        const _userId = +req.body.user_id || 0;
+        const _userId = +req.params.userId || 0;
         const _user = await userModel.genericMethods.findById(_userId);
         if (_user != null){
             const listDebt = debtListModel.listSelfMade(_userId);
@@ -90,10 +90,10 @@ router.get("/selfMade",authRole(role.CUSTOMER),async function(req,res){
 })
 
 //Get debt list of other-made by userId API: /api/debtList/otherMade
-router.get("/otherMade",authRole(role.CUSTOMER),async function(req,res){
+router.get("/:userId/otherMade",authRole(role.CUSTOMER),async function(req,res){
     try{
         //get userid from body
-        const _userId = +req.body.user_id || 0;
+        const _userId = +req.params.userId || 0;
         const _userBanking = await bankingAccountModel.findByUserId(_userId);
         if (_userBanking != null){
             const userAccountNumber = _userBanking[0].account_number;

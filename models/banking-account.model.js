@@ -22,6 +22,7 @@ export default {
             .select('user.user_id',
                     'user.full_name',
                     'user.email',
+                    'user.phone',
                     'banking_account.balance');
     },
     async updateAccountBalance(accountNumber,amount,type){
