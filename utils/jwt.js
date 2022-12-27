@@ -57,10 +57,11 @@ export default {
         }
     },
 
-    async verifyAsyncToken(payload,publicKey){
+    async verifyAsyncToken(payload,publicKey,tokenLife){
         try {
             return await jwt.verify(payload,publicKey,{
-                algorithms:"RS256"
+                algorithms:"RS256",
+                maxAge:tokenLife
             });
         } catch (e) {
             console.log(e)

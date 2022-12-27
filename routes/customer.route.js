@@ -360,6 +360,8 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
         const token =await jwt.generateAsyncToken(infoTransaction.des_account_number,process.env.PRIVATE_KEY,EXPIRED_RSA_TIME)
         const infoVerification = {token:token,bank_code:"SLB"}
 
+        console.log(infoVerification)
+
         // Sending des_account_number to other bank to query info
         const result = await axios({
             url:"http://localhost:3050/api/customers/desaccount",
@@ -393,8 +395,17 @@ router.get("/desaccount",async(req,res)=>{
     const {token,bank_code} = req.body
     // Get public key based on bank_code from infoVerification
     const bankInfo = await bankModel.genericMethods.findById(bank_code)
+
+    // Check other bank is exist in database
+    if(bankInfo === null ){
+        return res.status(400).json({
+            isSuccess:false,
+            message:"Bank doesn't belongs to system connectivity banks"
+        })
+    }
+
     // Verify exactly other bank is send this message
-    if(await jwt.verifyAsyncToken(token,bankInfo.public_key) === null){
+    if(await jwt.verifyAsyncToken(token,bankInfo.public_key,EXPIRED_RSA_TIME) === null){
         return res.status(403).json({
             isSuccess:false,
             message:"Can not verified token"
