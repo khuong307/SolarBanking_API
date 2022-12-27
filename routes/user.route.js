@@ -85,8 +85,8 @@ router.get('/:userId/recipients',validateParams, authUser, authRole(role.CUSTOME
         recipients[i].owner_id = accountOwner.user_id;
         recipients[i].bank_name = connectedBank;
     }
-
     return res.json(recipients);
+    
 });
 
 // Add a recipient API

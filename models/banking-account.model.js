@@ -19,7 +19,7 @@ export default {
     },
     getInfoRecipientBy(account_number){
         return db('banking_account').where('account_number',account_number)
-            .join('user','account_number.user_id','=','user.user_id')
+            .join('user','banking_account.user_id','=','user.user_id')
             .select('user.user_id',
                     'user.full_name',
                     'user.email',
@@ -62,5 +62,16 @@ export default {
     async findByUserIdAndBankCode(userId){
         const res = await db('banking_account').where('user_id',userId).andWhere('bank_code',BANK_CODE).andWhere("is_spend_account",1).select()
         return res.length !== 0 ? res[0] : null
+    },
+
+    async getInfoUserBy(account_number){
+        const res = await db('banking_account').where('account_number',account_number)
+            .join('user','banking_account.user_id','=','user.user_id')
+            .select('user.user_id',
+                'user.full_name',
+                'user.email',
+                'user.phone',
+                'banking_account.balance');
+        return res.length !==0 ? res[0] :null
     }
 };
