@@ -33,9 +33,14 @@ router.get('/customer/:accessInfo', authUser, async function (req, res) {
     const {accessInfo} = req.params
     const isBankAccount = await banking_accountModel.genericMethods.findByCol("account_number", accessInfo)
     const isUsername = await userAccountModel.genericMethods.findByCol("username", accessInfo)
+    var spendAccountInfo = ""
+    if (isUsername != null ){
+        spendAccountInfo = await banking_accountModel.genericMethods.findBy2ColMany("user_id", isUsername.user_id, "is_spend_account", 1)
+
+    }
     const bankAccountInfo = isBankAccount != null ?
         isBankAccount: isUsername != null ?
-            await banking_accountModel.genericMethods.findByCol("user_id", isUsername.user_id) :
+            spendAccountInfo[0]:
             null
 
     if (bankAccountInfo != null){
