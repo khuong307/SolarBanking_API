@@ -8,7 +8,8 @@
       "type": "number"
     },
     "nick_name": {
-      "type": "string"
+      "type": "string",
+      "nullable": true
     }
   },
   "required": [
