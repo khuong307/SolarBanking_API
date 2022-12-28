@@ -194,7 +194,14 @@ router.delete('/:userId/recipients/:accountNumber', validateParams, authUser, au
 // Get list of transaction history
 router.get('/:userId/history', validateParams, authUser, authRole(role.CUSTOMER), async function(req, res) {
     const userId = +req.params.userId;
-    const userInfo = await banking_accountModel.genericMethods.findByCol("user_id", userId)
+    const userAccounts =   await banking_accountModel.genericMethods.findByColMany("user_id", userId)
+    var userInfo = ""
+    for (const c of userAccounts){
+        if (c.is_spend_account == 1){
+            userInfo = c
+        }
+    }
+
     if (userInfo == null){
         return res.status(209).json({
             isFound: false,

@@ -113,7 +113,7 @@ router.post('/customer/:account_number',  authUser, authRole(role.EMPLOYEE), val
     })
 
 });
-router.post('/customer',authUser, authRole(role.EMPLOYEE),validate(newCustomerSchema), async function (req, res) {
+router.post('/customer', authUser, authRole(role.EMPLOYEE), validate(newCustomerSchema), async function (req, res) {
     const {full_name, email, phone, username, password, spend_account, initial_balance } = req.body
     const isEmailExisted = await userModel.genericMethods.isExistedByCol("email", email)
     const isUsernameExited = await userAccountModel.genericMethods.isExistedByCol("username", username)
