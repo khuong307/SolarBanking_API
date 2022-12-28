@@ -66,8 +66,9 @@ router.get("/:userId/selfMade",async function(req,res){
         //get userid from body
         const _userId = +req.params.userId || 0;
         const _user = await userModel.genericMethods.findById(_userId);
+
         if (_user != null){
-            const listDebt = debtListModel.listSelfMade(_userId);
+            const listDebt = await debtListModel.listSelfMade(_userId);
             res.status(200).json({
                 isSuccess: true,
                 message: "This is all debts of you",
@@ -90,14 +91,14 @@ router.get("/:userId/selfMade",async function(req,res){
 })
 
 //Get debt list of other-made by userId API: /api/debtList/otherMade
-router.get("/:userId/otherMade",authRole(role.CUSTOMER),async function(req,res){
+router.get("/:userId/otherMade",async function(req,res){
     try{
         //get userid from body
         const _userId = +req.params.userId || 0;
         const _userBanking = await bankingAccountModel.findByUserId(_userId);
         if (_userBanking != null){
             const userAccountNumber = _userBanking[0].account_number;
-            const listDebt = debtListModel.listOtherMade(userAccountNumber);
+            const listDebt = await debtListModel.listOtherMade(userAccountNumber);
             res.status(200).json({
                 isSuccess: true,
                 message: "This is all debts of you",

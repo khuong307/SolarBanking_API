@@ -4,11 +4,13 @@ import generate from "./generic.model.js";
 const TABLE_NAME = 'debt_list';
 export default {
     genericMethods: generate(TABLE_NAME, 'debt_id'),
-    listSelfMade(userId){
-        return db(TABLE_NAME).where('user_id',userId).select();
+    async listSelfMade(userId){
+        const res = await db(TABLE_NAME).where('user_id',userId);
+        return res
     },
-    listOtherMade(accountNumber){
-        return db(TABLE_NAME).where('debt_account_number', accountNumber).select();
+    async listOtherMade(accountNumber){
+        const res = await db(TABLE_NAME).where('debt_account_number', accountNumber);
+        return res;
     },
     async getDebtById(debtId){
         const obj =  await db(TABLE_NAME).where('debt_id',debtId).select();
