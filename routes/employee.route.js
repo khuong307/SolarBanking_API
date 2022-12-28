@@ -14,7 +14,8 @@ import {
     generateContent,
     generateAccount,
     generateTransfer,
-    filterTransactionByTypeAndDes
+    filterTransactionByTypeAndDes,
+    generateRefreshToken
 } from '../utils/bank.js'
 import validate from '../middlewares/validate.mdw.js';
 import {authRole, authUser} from "../middlewares/auth.mdw.js";
@@ -29,13 +30,18 @@ const transferEmployee = JSON.parse(await readFile(new URL('../schemas/employee_
 
 const router = express.Router();
 
-router.get('/customer/:accessInfo', authUser, authRole(role.EMPLOYEE), async function (req, res) {
+router.get('/customer/:accessInfo', authUser, async function (req, res) {
     const {accessInfo} = req.params
     const isBankAccount = await banking_accountModel.genericMethods.findByCol("account_number", accessInfo)
     const isUsername = await userAccountModel.genericMethods.findByCol("username", accessInfo)
+    var spendAccountInfo = ""
+    if (isUsername != null ){
+        spendAccountInfo = await banking_accountModel.genericMethods.findBy2ColMany("user_id", isUsername.user_id, "is_spend_account", 1)
+
+    }
     const bankAccountInfo = isBankAccount != null ?
         isBankAccount: isUsername != null ?
-            await banking_accountModel.genericMethods.findByCol("user_id", isUsername.user_id) :
+            spendAccountInfo[0]:
             null
 
     if (bankAccountInfo != null){
@@ -113,7 +119,7 @@ router.post('/customer/:account_number',  authUser, authRole(role.EMPLOYEE), val
     })
 
 });
-router.post('/customer',authUser, authRole(role.EMPLOYEE),validate(newCustomerSchema), async function (req, res) {
+router.post('/customer', authUser, authRole(role.EMPLOYEE), validate(newCustomerSchema), async function (req, res) {
     const {full_name, email, phone, username, password, spend_account, initial_balance } = req.body
     const isEmailExisted = await userModel.genericMethods.isExistedByCol("email", email)
     const isUsernameExited = await userAccountModel.genericMethods.isExistedByCol("username", username)
@@ -126,7 +132,7 @@ router.post('/customer',authUser, authRole(role.EMPLOYEE),validate(newCustomerSc
     if (isEmailExisted == false && isUsernameExited == false){
         const hashPassword = bcrypt.hashSync(password, 10)
         const newUser = {full_name, email, phone}
-        const newUserAccount = {username, password: hashPassword, user_type_id: 1}
+        const newUserAccount = {username, password: hashPassword, user_type_id: 1, refresh_token: generateRefreshToken()}
         const newBankingAccount = {account_number: spend_account, balance: balanceToInt(initial_balance), bank_code: "SLB"}
 
         //add to new Database

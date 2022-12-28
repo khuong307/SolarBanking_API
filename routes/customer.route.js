@@ -4,11 +4,15 @@ import recipientModel from "../models/recipient.model.js"
 import validate, { validateParams } from '../middlewares/validate.mdw.js';
 import userModel from "../models/user.model.js"
 import transactionModel from "../models/transaction.model.js";
+import bankModel from "../models/bank.model.js";
 import generateOtp from "../utils/otp.js"
 import generateEmail from "../utils/mail.js"
 import datetime_func from "../utils/datetime_func.js";
-import { TRANSFER_FEE } from "../utils/bank_constanst.js";
+import { BANK_CODE, EXPIRED_RSA_TIME, TRANSFER_FEE } from "../utils/bank_constanst.js";
 import { generateDesTransfer, generateOtpContentTransfer, generateSrcTransfer } from "../utils/bank.js";
+import jwt from "../utils/jwt.js";
+import axios from "axios";
+
 
 const router = express.Router()
 
@@ -51,6 +55,8 @@ router.get("/:userId/bankaccount", validateParams, async (req, res) => {
         })
     }
 })
+
+// ------------------ INTERBANK: CHUYEN KHOAN NOI BO -------------------- //
 
 // FIrst step : Check Info Inter Transaction Before Real Transfer
 router.post("/:userId/intratransaction", validateParams, async (req, res) => {
@@ -154,15 +160,22 @@ router.post("/intratransaction/:id", async (req, res) => {
         // Check transaction exist in database ( based on transactionId and not success)
         const dataTransaction = await transactionModel.findTransactionNotSuccessById(transactionId)
         if (dataTransaction === null) {
+            console.log(dataTransaction)
             return res.status(403).json({
                 isSuccess: false,
                 message: "Transaction has already completed"
             })
         }
 
+        console.log(otpInfo.created_at)
+        console.log(dataTransaction.transaction_created_at)
+
         const otpSendTime = datetime_func.convertStringToDate(otpInfo.created_at)
         const otpCreatedTime = datetime_func.convertStringToDate(dataTransaction.transaction_created_at)
         const diff = datetime_func.diff_minutes(otpSendTime, otpCreatedTime)
+        console.log(otpSendTime)
+        console.log(otpCreatedTime)
+        console.log(diff)
         // Otp failed or time valid for otp is expired 
         if (otpInfo.otpCode !== dataTransaction.otp_code || diff > 5) {
             return res.status(403).json({
@@ -263,7 +276,7 @@ router.post("/intratransaction/:id", async (req, res) => {
     }
 })
 
-
+// Resend OTP
 router.post("/transaction/:id/otp", async (req, res) => {
     const transactionId = req.params.id
     try {
@@ -309,5 +322,120 @@ router.post("/transaction/:id/otp", async (req, res) => {
     }
 })
 
+
+// -------------------------------------- INTERBANK : LIEN NGAN HANG ---------------------------- //
+
+// First step: Get des_full_info from other banks based on des_account_number
+router.post("/:userId/intertransaction", validateParams, async (req, res) => {
+    const infoTransaction = req.body
+    const userId = +req.params.userId
+    try {
+        // Check src_account_number is existed (belong to userId)
+        const result_src = await bankingAccountModel.findByUserIdAndAccountNumber(userId, infoTransaction.src_account_number)
+        if (result_src.length === 0) {
+            return res.status(403).json({
+                isSuccess: false,
+                message: "source account number is invalid"
+            })
+        }
+
+        // Check amount of money is valid corresponding to account_number
+        if (infoTransaction.transaction_amount > result_src[0].balance) {
+            return res.status(403).json({
+                isSuccess: false,
+                message: "Money transaction is invalid"
+            })
+        }
+
+        // Check bank exist from database
+        const bankInfo = await bankModel.genericMethods.findById(infoTransaction.bank_code)
+        if(bankInfo === null || infoTransaction.bank_code ===BANK_CODE){
+            return res.status(400).json({
+                isSuccess:false,
+                message:"Bank doesn't belongs to system connectivity banks"
+            })
+        }
+
+        // Encrypt des_account_number by private key
+        const token =await jwt.generateAsyncToken(infoTransaction.des_account_number,process.env.PRIVATE_KEY,EXPIRED_RSA_TIME)
+        const infoVerification = {token:token,bank_code:"SLB"}
+
+        console.log(infoVerification)
+
+        // Sending des_account_number to other bank to query info
+        const result = await axios({
+            url:"http://localhost:3050/api/customers/desaccount",
+            method:"GET",
+            data:infoVerification
+        })
+        const result_des = result.data.infoRecipient
+
+        return res.status(200).json({
+            isSuccess: true,
+            message: "Confirm transaction is valid",
+            infoTransaction: { ...infoTransaction, 
+                full_name: result_des.full_name,
+                email:result_des.email,
+                phone:result_des.phone,
+                transaction_type: 2 }
+        })
+
+
+    } catch (err) {
+        console.log(err)
+        return res.status(500).json({
+            isSuccess: false,
+            message: "Can not confirm the transaction"
+        })
+    }
+})
+
+// First step: Receive account_number from other bank and query to send back to that bank
+router.get("/desaccount",async(req,res)=>{
+    const {token,bank_code} = req.body
+    // Get public key based on bank_code from infoVerification
+    const bankInfo = await bankModel.genericMethods.findById(bank_code)
+
+    // Check other bank is exist in database
+    if(bankInfo === null ){
+        return res.status(400).json({
+            isSuccess:false,
+            message:"Bank doesn't belongs to system connectivity banks"
+        })
+    }
+
+    // Verify exactly other bank is send this message
+    if(await jwt.verifyAsyncToken(token,bankInfo.public_key,EXPIRED_RSA_TIME) === null){
+        return res.status(403).json({
+            isSuccess:false,
+            message:"Can not verified token"
+        })
+    }
+    // Decode token to get des_account_number
+    const decodedInfo = await jwt.decodeAsyncToken(token)
+    if(decodedInfo === null){
+        return res.status(400).json({
+            isSuccess:false,
+            message:"Can not decode token"
+        })
+    }
+
+    // Get info des_account_number
+    const account_number = decodedInfo.payload.payload
+    const infoRecipient = await bankingAccountModel.getInfoUserBy(account_number)
+    if(infoRecipient===null){
+        return res.status(400).json({
+            isSuccess:false,
+            message:"Can not find user by account number"
+        })
+    }
+    // delete balance des_account_number before sending to other bank
+    delete infoRecipient.balance
+
+    return res.status(200).json({
+        isSuccess:true,
+        infoRecipient
+    })
+})
 
 export default router

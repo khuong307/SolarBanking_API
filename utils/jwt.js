@@ -30,5 +30,42 @@ export default {
          } catch (e) {
              return null;
          }
+    },
+
+
+    // ----------- RS256 -----------------------
+    async generateAsyncToken(payload,privateKey,tokenLife){
+        return await jwt.sign(
+            {
+                payload,
+            },
+            privateKey,
+            {
+                algorithm: 'RS256',
+                expiresIn: tokenLife,
+            },
+        );
+    },
+
+    async decodeAsyncToken(token){
+        try {
+            return await jwt.decode(token,{
+                complete: true,
+            });
+        } catch (e) {
+            return null;
+        }
+    },
+
+    async verifyAsyncToken(payload,publicKey,tokenLife){
+        try {
+            return await jwt.verify(payload,publicKey,{
+                algorithms:"RS256",
+                maxAge:tokenLife
+            });
+        } catch (e) {
+            console.log(e)
+            return null;
+        }
     }
 }
