@@ -29,7 +29,7 @@ const transferEmployee = JSON.parse(await readFile(new URL('../schemas/employee_
 
 const router = express.Router();
 
-router.get('/customer/:accessInfo', authUser, authRole(role.EMPLOYEE), async function (req, res) {
+router.get('/customer/:accessInfo', authUser, async function (req, res) {
     const {accessInfo} = req.params
     const isBankAccount = await banking_accountModel.genericMethods.findByCol("account_number", accessInfo)
     const isUsername = await userAccountModel.genericMethods.findByCol("username", accessInfo)
