@@ -147,10 +147,10 @@ router.get("/:debtId",authRole(role.CUSTOMER),async function(req,res,next){
 })
 
 //Create new debt API (internal): /api/debtList/
-router.post("/",validate(debtCreateSchema),authRole(role.CUSTOMER),async function(req,res){
+router.post("/",validate(debtCreateSchema),async function(req,res){
     try{
         const user_id = +req.body.user_id || 0;
-        const debt_account_number = req.body.accountNumber || '';
+        const debt_account_number = req.body.debt_account_number || '';
         const debt_amount = +req.body.debt_amount || 0;
         const debt_message= req.body.debt_message || '';
         if (user_id > 0){
@@ -159,6 +159,7 @@ router.post("/",validate(debtCreateSchema),authRole(role.CUSTOMER),async functio
                 debt_account_number: debt_account_number,
                 debt_amount: debt_amount,
                 debt_message: debt_message,
+                paid_transaction_id : null,
                 debt_status: debt_status.NOTPAID,
                 debt_cancel_message: ''
             }
