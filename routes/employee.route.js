@@ -14,7 +14,8 @@ import {
     generateContent,
     generateAccount,
     generateTransfer,
-    filterTransactionByTypeAndDes
+    filterTransactionByTypeAndDes,
+    generateRefreshToken
 } from '../utils/bank.js'
 import validate from '../middlewares/validate.mdw.js';
 import {authRole, authUser} from "../middlewares/auth.mdw.js";
@@ -131,7 +132,7 @@ router.post('/customer', authUser, authRole(role.EMPLOYEE), validate(newCustomer
     if (isEmailExisted == false && isUsernameExited == false){
         const hashPassword = bcrypt.hashSync(password, 10)
         const newUser = {full_name, email, phone}
-        const newUserAccount = {username, password: hashPassword, user_type_id: 1}
+        const newUserAccount = {username, password: hashPassword, user_type_id: 1, refresh_token: generateRefreshToken()}
         const newBankingAccount = {account_number: spend_account, balance: balanceToInt(initial_balance), bank_code: "SLB"}
 
         //add to new Database

@@ -87,6 +87,14 @@ export async function generateAccount() {
     return account
 }
 
+export function generateRefreshToken(){
+    const str = randomString.generate({
+        length: 20,
+        charset: 'numeric'
+    });
+    return str
+}
+
 export async function filterTransactionByTypeAndDes(transactions, type, src, isSLB) {
     const ans = []
     for (const trans of transactions) {
