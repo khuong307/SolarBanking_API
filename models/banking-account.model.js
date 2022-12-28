@@ -59,6 +59,10 @@ export default {
     findByAccountNumberAndBankCode(accountNumber,bankCode){
         return db('banking_account').where('account_number',accountNumber).andWhere('bank_code',bankCode).select()
     },
+    async checkExistBy(accountNumber,bankCode){
+        const ans = await db('banking_account').where('account_number',accountNumber).andWhere('bank_code',bankCode).select()
+        return ans.length > 0 ? true:false
+    },
     async findByUserIdAndBankCode(userId){
         const res = await db('banking_account').where('user_id',userId).andWhere('bank_code',BANK_CODE).andWhere("is_spend_account",1).select()
         return res.length !== 0 ? res[0] : null
