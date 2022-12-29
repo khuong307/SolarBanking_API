@@ -182,7 +182,7 @@ router.post('/password', async function(req, res) {
             new_password: hashedPassword
         }
 
-        await userAccountModel.updatePassword(account.username, hashedPassword);
+        await userAccountModel.updatePassword(userId, hashedPassword);
         await forgetPasswordHistoryModel.updateLastChange(userId, lastForgetPassword.reset_at, newForgetPassword);
 
         return res.json({
