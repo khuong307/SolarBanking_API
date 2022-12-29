@@ -97,7 +97,13 @@ router.post("/:userId/intratransaction", validateParams, async (req, res) => {
         return res.status(200).json({
             isSuccess: true,
             message: "Confirm transaction is valid",
-            infoTransaction: { ...infoTransaction, full_name: result_user_des.full_name, transaction_type: 1 }
+            infoTransaction: {
+                ...infoTransaction,
+                full_name: result_user_des.full_name,
+                email: result_user_des.email,
+                phone: result_user_des.phone,
+                transaction_type: 1
+            }
         })
 
 
@@ -375,7 +381,6 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
                 phone: result_des.phone
             }
             des_user_id = await trx("user").insert(newUser)
-            console.log(des_user_id)
         }
 
         // Check banking account existed in db
@@ -388,7 +393,6 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
                 bank_code: infoTransaction.bank_code,
                 is_spend_account: 1
             }
-            console.log(newBankAccount)
             await trx("banking_account").insert(newBankAccount)
         }
 
@@ -578,8 +582,8 @@ router.post("/intertransaction/:id", async (req, res) => {
         // Create info Transaction to send to client
         const infoTransaction = {
             full_name: infoDesUser.full_name,
-            bank: "SOLAR BANKING",
-            des_account_number: dataTransaction.account_number,
+            bank: bankInfo.bank_name,
+            des_account_number: dataTransaction.des_account_number,
             transaction_amount: dataTransaction.transaction_amount,
             transaction_message: dataTransaction.transaction_message,
             transaction_fee: TRANSFER_FEE,
@@ -611,70 +615,70 @@ router.post("/intertransaction/:id", async (req, res) => {
 
 
 // -------------- IN CASE RECEIVE MONEY FROM OTHER BANKS FINAL STEP
-router.get("/intertransaction",async(req,res)=>{
-    const {token,bank_code} = req.body
+router.get("/intertransaction", async (req, res) => {
+    const { token, bank_code } = req.body
     console.log(req.body)
     console.log(token)
     console.log(bank_code)
     // Get public key based on bank_code from infoVerification
     const bankInfo = await bankModel.genericMethods.findById(bank_code)
     // Check other bank is exist in database
-    if(bankInfo === null ){
+    if (bankInfo === null) {
         return res.status(400).json({
-            isSuccess:false,
-            message:"Bank doesn't belongs to system connectivity banks"
+            isSuccess: false,
+            message: "Bank doesn't belongs to system connectivity banks"
         })
     }
 
     // Verify exactly other bank is send this message
-    if(await jwt.verifyAsyncToken(token,bankInfo.public_key,EXPIRED_RSA_TIME) === null){
+    if (await jwt.verifyAsyncToken(token, bankInfo.public_key, EXPIRED_RSA_TIME) === null) {
         return res.status(403).json({
-            isSuccess:false,
-            message:"Can not verified token"
+            isSuccess: false,
+            message: "Can not verified token"
         })
     }
 
     // Decode token to get des_account_number
     const decodedInfo = await jwt.decodeAsyncToken(token)
-    if(decodedInfo === null){
+    if (decodedInfo === null) {
         return res.status(400).json({
-            isSuccess:false,
-            message:"Can not decode token"
+            isSuccess: false,
+            message: "Can not decode token"
         })
     }
 
     const infoReceive = decodedInfo.payload.payload
     const newUser = {
-        full_name:infoReceive?.full_name,
-        email:infoReceive?.email,
-        phone:infoReceive?.phone
+        full_name: infoReceive?.full_name,
+        email: infoReceive?.email,
+        phone: infoReceive?.phone
     }
     const newBankAccount = {
-        account_number:infoReceive?.src_account_number,
-        balance:0,
-        user_id:infoReceive?.user_id,
+        account_number: infoReceive?.src_account_number,
+        balance: 0,
+        user_id: infoReceive?.user_id,
         bank_code,
-        is_spend_account:1
+        is_spend_account: 1
     }
 
 
     // Using trx as a transaction object:
     const trx = await db.transaction();
-    try{
+    try {
         const desInfo = await bankingAccountModel.getInfoUserBy(infoReceive?.des_account_number)
-        if(desInfo === null){
+        if (desInfo === null) {
             return res.status(400).json({
-                isSuccess:false,
-                message:"Account doesn't exist"
+                isSuccess: false,
+                message: "Account doesn't exist"
             })
         }
 
         // Find account_number receive money
         let recipientAccount = await bankingAccountModel.genericMethods.findById(infoReceive?.des_account_number)
-        if(recipientAccount === null){
+        if (recipientAccount === null) {
             return res.status(400).json({
-                isSuccess:false,
-                message:"Account doesn't exist"
+                isSuccess: false,
+                message: "Account doesn't exist"
             })
         }
 
@@ -713,7 +717,7 @@ router.get("/intertransaction",async(req,res)=>{
         }
 
         // Check src banking account existed in db
-        if (!await bankingAccountModel.checkExistBy(infoReceive.src_account_number,bank_code)) {
+        if (!await bankingAccountModel.checkExistBy(infoReceive.src_account_number, bank_code)) {
             // Add new banking account to db
             const newBankAccount = {
                 account_number: infoReceive.src_account_number,
@@ -727,7 +731,7 @@ router.get("/intertransaction",async(req,res)=>{
         }
 
         // Update balance of account
-        const result = await trx("banking_account").where({account_number:infoReceive.des_account_number})
+        const result = await trx("banking_account").where({ account_number: infoReceive.des_account_number })
             .update(recipientAccount)
 
         // delete attribute sent by other bank
@@ -737,27 +741,27 @@ router.get("/intertransaction",async(req,res)=>{
         delete infoReceive?.email
         delete infoReceive?.phone
         // Add new transaction to db
-        await trx("transaction").insert({...infoReceive,is_success:1})
+        await trx("transaction").insert({ ...infoReceive, is_success: 1 })
 
         delete desInfo.balance
         // Encrypt data to send back to other bank
-        const encryptToken = await jwt.generateAsyncToken(desInfo,process.env.PRIVATE_KEY,EXPIRED_RSA_TIME)
-        const encryptedData = {encryptToken,bank_code:"TCB"}
+        const encryptToken = await jwt.generateAsyncToken(desInfo, process.env.PRIVATE_KEY, EXPIRED_RSA_TIME)
+        const encryptedData = { encryptToken, bank_code: "TCB" }
 
         await trx.commit()
         console.log(result)
 
         return res.status(200).json({
-            isSuccess:true,
-            message:"Transaction completed",
+            isSuccess: true,
+            message: "Transaction completed",
             encryptedData
         })
-    }catch(err){
+    } catch (err) {
         await trx.rollback()
         console.log(err)
         res.status(500).json({
-            isSuccess:false,
-            message:"Can not done the transaction"
+            isSuccess: false,
+            message: "Can not done the transaction"
         })
     }
 })
