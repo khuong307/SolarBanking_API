@@ -68,7 +68,7 @@ router.get("/:userId/selfMade",async function(req,res){
         const _user = await userModel.genericMethods.findById(_userId);
 
         if (_user != null){
-            const listDebt = await debtListModel.listSelfMade(_userId);
+            const listDebt = debtListModel.listSelfMade(_userId);
             res.status(200).json({
                 isSuccess: true,
                 message: "This is all debts of you",

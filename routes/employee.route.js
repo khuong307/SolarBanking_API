@@ -91,14 +91,14 @@ router.post('/customer/:account_number',  authUser, authRole(role.EMPLOYEE), val
         //mail
         const email_content = generateTransfer(customer_info.full_name, account_number, req.body.amount,bankAccountInfo.balance, message,  customer_info.email)
         mail(customer_info.email, "[SOLAR BANKING] [Transaction Information]", email_content)
-        //notification
-        const newNoti = {
-            user_id: customer_info.user_id,
-            transaction_id: newTransaction,
-            notification_message: message,
-            is_seen: 0,
-        }
-        await notificationModel.genericMethods.add(newNoti)
+        // //notification
+        // const newNoti = {
+        //     user_id: customer_info.user_id,
+        //     transaction_id: newTransaction,
+        //     notification_message: message,
+        //     is_seen: 0,
+        // }
+        // await notificationModel.genericMethods.add(newNoti)
 
         return res.status(200).json({
             isFound: true,
