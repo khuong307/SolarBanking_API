@@ -9,6 +9,8 @@ import cors from 'cors'
 import swaggerUI from 'swagger-ui-express';
 import swaggerJsDoc from 'swagger-jsdoc';
 import {swaggerConfigOptions} from './utils/swagger.js';
+import http from 'http';
+import {Server} from 'socket.io';
 
 import userAccountRoute from './routes/user-account.route.js';
 import userRoute from './routes/user.route.js';
@@ -18,10 +20,10 @@ import customerRoute from "./routes/customer.route.js";
 import bankRoute from "./routes/bank.route.js";
 
 const app = express();
+
 app.use(express.json());
 app.use(morgan('dev'));
 app.use(cors())
-
 
 const specs = swaggerJsDoc(swaggerConfigOptions);
 app.use(
@@ -53,6 +55,15 @@ app.use(function (err, req, res, next) {
 });
 
 const PORT = process.env.app_port;
-app.listen(PORT, function () {
+const server = http.createServer(app);
+const io = new Server(server);
+
+io.on('connection', (socket) => {
+    console.log('A user is connected');
+});
+
+server.listen(PORT, function () {
     console.log(`Sakila API is listening at http://localhost:${PORT}`);
 });
+
+export default io;

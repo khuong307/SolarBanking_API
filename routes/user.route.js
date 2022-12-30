@@ -12,6 +12,7 @@ import userAccountModel from "../models/user-account.model.js";
 import banking_accountModel from "../models/banking-account.model.js";
 import transactionModel from "../models/transaction.model.js";
 import {filterTransactionByTypeAndDes} from "../utils/bank.js";
+import notificationModel from "../models/notification.model.js";
 
 const userSchema = JSON.parse(await readFile(new URL('../schemas/user.json', import.meta.url)));
 const recipientSchema = JSON.parse(await readFile(new URL('../schemas/recipient.json', import.meta.url)));
@@ -84,6 +85,7 @@ router.get('/:userId/recipients',validateParams, authUser, authRole(role.CUSTOME
 
         recipients[i].owner_id = accountOwner.user_id;
         recipients[i].bank_name = connectedBank;
+        recipients[i].bank_code = accountOwner.bank_code;
     }
     return res.json(recipients);
     
@@ -231,4 +233,54 @@ router.get('/:userId/history', validateParams, authUser, authRole(role.CUSTOMER)
     }
 
 });
+
+// Get notification by user id
+router.get('/:userId/notifications', validateParams, authUser, authRole(role.CUSTOMER), async function(req, res) {
+    const MAX_NOTIFICATION_LENGTH = 1000;
+    const userId = +req.params.userId;
+    const limit = +req.query.limit || MAX_NOTIFICATION_LENGTH;
+
+    const notifications = await notificationModel.getNotificationsByUserId(userId, limit);
+
+    return res.json(notifications);
+});
+
+// Update is_seen status of all notifications
+router.put('/notifications/all', authUser, authRole(role.CUSTOMER), async function(req, res) {
+    const unseenIdArray = req.body.unseen_id_array || [];
+
+    if (!Array.isArray(unseenIdArray))
+        return res.status(400).json({
+            isSuccess: false,
+            message: 'The response body must be an integer array!'
+        });
+
+    for (let i = 0; i < unseenIdArray.length; i++) {
+        await notificationModel.updateIsSeen(unseenIdArray[i]);
+    }
+
+    return res.json({
+        isSuccess: true,
+        message: 'Update is_seen successfully!'
+    });
+});
+
+// Update is_seen status by notification id
+router.put('/notifications/:notificationId', authUser, authRole(role.CUSTOMER), async function(req, res) {
+    const notificationId = +req.params.notificationId;
+
+    const ret = await notificationModel.updateIsSeen(notificationId);
+
+    if (ret === 0)
+        return res.status(400).json({
+            isSuccess: false,
+            message: 'The notification id does not exist in the system!'
+        });
+
+    return res.json({
+        isSuccess: true,
+        message: 'Update is_seen successfully!'
+    });
+});
+
 export default router;
