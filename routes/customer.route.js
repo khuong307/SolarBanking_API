@@ -614,7 +614,7 @@ router.post("/intertransaction/:id", async (req, res) => {
 })
 
 
-// -------------- IN CASE RECEIVE MONEY FROM OTHER BANKS FINAL STEP
+// -------------- IN CASE RECEIVE MONEY FROM OTHER BANKS FINAL STEP ------------------------------//
 router.get("/intertransaction", async (req, res) => {
     const { token, bank_code } = req.body
     console.log(req.body)
@@ -648,6 +648,7 @@ router.get("/intertransaction", async (req, res) => {
     }
 
     const infoReceive = decodedInfo.payload.payload
+    console.log(infoReceive)
     const newUser = {
         full_name: infoReceive?.full_name,
         email: infoReceive?.email,
@@ -746,7 +747,7 @@ router.get("/intertransaction", async (req, res) => {
         delete desInfo.balance
         // Encrypt data to send back to other bank
         const encryptToken = await jwt.generateAsyncToken(desInfo, process.env.PRIVATE_KEY, EXPIRED_RSA_TIME)
-        const encryptedData = { encryptToken, bank_code: "TCB" }
+        const encryptedData = { encryptToken, bank_code: "SLB" }
 
         await trx.commit()
         console.log(result)
