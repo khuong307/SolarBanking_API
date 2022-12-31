@@ -360,8 +360,12 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
             })
         }
 
+        const payload = {
+            des_account_number: infoTransaction.des_account_number,
+            des_bank_code: infoTransaction.bank_code
+        }
         // Encrypt des_account_number by private key
-        const token = await jwt.generateAsyncToken(infoTransaction.des_account_number, process.env.PRIVATE_KEY, EXPIRED_RSA_TIME)
+        const token = await jwt.generateAsyncToken(payload, process.env.PRIVATE_KEY, EXPIRED_RSA_TIME)
         const infoVerification = { token: token, bank_code: "SLB" }
 
         // Sending des_account_number to other bank to query info
@@ -451,8 +455,20 @@ router.get("/desaccount", async (req, res) => {
         })
     }
 
+    console.log(decodedInfo)
+
     // Get info des_account_number
-    const account_number = decodedInfo.payload.payload
+    const account_number = decodedInfo.payload.payload.des_account_number
+    const des_bank_code = decodedInfo.payload.payload.des_bank_code
+
+    // Check des_account_number existed based on account number and bank code
+    if (!await bankingAccountModel.checkExistBy(account_number, des_bank_code)) {
+        return res.status(400).json({
+            isSuccess: false,
+            message: "Can not find user by account number"
+        })
+    }
+
     const infoRecipient = await bankingAccountModel.getInfoUserBy(account_number)
     if (infoRecipient === null) {
         return res.status(400).json({
