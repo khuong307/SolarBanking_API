@@ -56,7 +56,11 @@ app.use(function (err, req, res, next) {
 
 const PORT = process.env.app_port;
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+    cors: {
+        origin: '*'
+    }
+});
 
 io.on('connection', (socket) => {
     console.log('A user is connected');

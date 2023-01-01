@@ -1,45 +1,8 @@
-/**
- * @swagger
- * tags:
- *   name: Debt List
- *   description: API to manage actors.
- * components:
- *   schemas:
- *     debt_list:
- *       type: object
- *       required:
- *         - first_name
- *         - last_name
- *       properties:
- *         debt_id:
- *           type: integer
- *           description: The auto-increment id of the category.
- *         user_id:
- *           type: integer
- *           description: The auto-increment id of the category.
- *         first_name:
- *           type: string
- *           description: First name of an actor.
- *         last_name:
- *           type: string
- *           description: Last name of an actor.
- *         last_update:
- *           type: string
- *           format: date
- *           description: The date of the actor creation or update.
- *       example:
- *          actor_id: 1
- *          first_name: Tony
- *          last_name: Stark
- *          last_update: 2006-02-14T21:46:27.000Z
- */
 import express from 'express';
-import bcrypt from 'bcrypt';
 import moment from 'moment';
 import * as dotenv from 'dotenv';
 import { readFile } from 'fs/promises';
 
-import jwt from '../utils/jwt.js';
 import createOTP from '../utils/otp.js';
 import sendEmail from '../utils/mail.js';
 import validate, {validateParams} from '../middlewares/validate.mdw.js';
@@ -52,6 +15,7 @@ import transactionsModel from "../models/transactions.model.js";
 import userModel from "../models/user.model.js";
 import debt_status from "../utils/debt_status.js";
 import role from "../utils/role.js";
+import io from '../app.js';
 
 dotenv.config();
 
@@ -290,15 +254,20 @@ router.post("/internal/verified-payment",authRole(role.CUSTOMER),async function(
                     transaction_id: transId,
                     debt_id: _debtId,
                     notification_message: `Debit code ${_debtId} has just been paid. Please check your account`,
-                    is_seen: 0
+                    is_seen: 0,
+                    notification_title: 'Debt Payment',
+                    notification_created_at: new Date()
                 };
                 //add new notification
-                await notificationModel.genericMethods.add(newNotify);
+                const ret = await notificationModel.genericMethods.add(newNotify);
+                io.emit(`new-notification-${recipientId}`, {
+                    notification_id: ret[0],
+                    ...newNotify
+                });
                 res.status(200).json({
                     isSuccess: true,
                     message: "Payment Successful",
                     status: debt_status.PAID,
-
                 })
             }
             return res.status(500).json({
@@ -338,10 +307,16 @@ router.delete("/cancelDebt/:debtId",validate(debtCancelSchema),authRole(role.CUS
                     transaction_id: transactionId,
                     debt_id: _debtId,
                     notification_message: messageCancel,
-                    is_seen: 0
+                    is_seen: 0,
+                    notification_title: 'Debt Cancellation',
+                    notification_created_at: new Date()
                 };
                 //add new notification
-                notificationModel.genericMethods.add(newNotify);
+                const ret = await notificationModel.genericMethods.add(newNotify);
+                io.emit(`new-notification-${recipientId}`, {
+                    notification_id: ret[0],
+                    ...newNotify
+                });
             }
             else{
                 //if cancel debt of another
@@ -353,10 +328,16 @@ router.delete("/cancelDebt/:debtId",validate(debtCancelSchema),authRole(role.CUS
                     transaction_id: transactionId,
                     debt_id: _debtId,
                     notification_message: messageCancel,
-                    is_seen: 0
+                    is_seen: 0,
+                    notification_title: 'Debt Cancellation',
+                    notification_created_at: new Date()
                 };
                 //add new notification
-                notificationModel.genericMethods.add(newNotify);
+                const ret = await notificationModel.genericMethods.add(newNotify);
+                io.emit(`new-notification-${reminderId}`, {
+                    notification_id: ret[0],
+                    ...newNotify
+                });
             }
             const result = await debtListModel.updateStatusDebtPayment(_debtId,debt_status.CANCEL);
 
