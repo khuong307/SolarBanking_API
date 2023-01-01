@@ -61,7 +61,7 @@ const debtCancelSchema = JSON.parse(await readFile(new URL('../schemas/debt-canc
 const router = express.Router();
 
 //Get debt list of self-made by userId API: /api/debtList/selfMade
-router.get("/:userId/selfMade",async function(req,res){
+router.get("/:userId/selfMade",authRole(role.CUSTOMER),async function(req,res){
     try{
         //get userid from body
         const _userId = +req.params.userId || 0;
@@ -91,7 +91,7 @@ router.get("/:userId/selfMade",async function(req,res){
 })
 
 //Get debt list of other-made by userId API: /api/debtList/otherMade
-router.get("/:userId/otherMade",async function(req,res){
+router.get("/:userId/otherMade",authRole(role.CUSTOMER),async function(req,res){
     try{
         //get userid from body
         const _userId = +req.params.userId || 0;
@@ -121,7 +121,7 @@ router.get("/:userId/otherMade",async function(req,res){
 })
 
 //Get detail of debt by debtId API : /api/debtList/:debtId
-router.get("/:debtId",async function(req,res,next){
+router.get("/:debtId",authRole(role.CUSTOMER),async function(req,res,next){
     try {
         const _debtId= +req.params.debtId || 0;
         const objDebt = await debtListModel.getDebtById(_debtId)
@@ -147,7 +147,7 @@ router.get("/:debtId",async function(req,res,next){
 })
 
 //Create new debt API (internal): /api/debtList/
-router.post("/",validate(debtCreateSchema),async function(req,res){
+router.post("/",validate(debtCreateSchema),authRole(role.CUSTOMER),async function(req,res){
     try{
         const user_id = +req.body.user_id || 0;
         const debt_account_number = req.body.debt_account_number || '';
@@ -192,7 +192,7 @@ router.post("/",validate(debtCreateSchema),async function(req,res){
 })
 
 //send OTP and create temp transaction API: /api/debtList/sendOtp
-router.post("/sendOtp",async function(req,res,next){
+router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
     try{
         const userId = +req.body.user_id || 0;
         const debtId = +req.body.debt_id || 0;
@@ -321,7 +321,7 @@ router.post("/internal/verified-payment",authRole(role.CUSTOMER),async function(
 //Cancel debt by debtId API: /api/debtList/cancelDebt/:debtId
 router.delete("/cancelDebt/:debtId",validate(debtCancelSchema),authRole(role.CUSTOMER),async function(req,res,next){
     try {
-        const _debtId = +req.params.debt_id || 0;
+        const _debtId = +req.params.debtId || 0;
         const _userId = +req.body.user_id || 0;
         const messageCancel = req.body.debt_cancel_message || '';
         const objDebt = await debtListModel.getDebtById(_debtId);

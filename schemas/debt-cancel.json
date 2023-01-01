@@ -19,9 +19,6 @@
     "paid_transaction_id": {
       "type": "number"
     },
-    "debt_status": {
-      "type": "enum"
-    },
     "debt_cancel_message": {
       "type": "string"
     },
@@ -30,7 +27,8 @@
     }
   },
   "required": [
-    "debt_cancel_message"
+    "debt_cancel_message",
+    "user_id"
   ],
   "additionalProperties": false
 }
