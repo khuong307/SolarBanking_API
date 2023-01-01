@@ -32,4 +32,12 @@ export default {
             account_number: accountNumber
         }).del();
     },
+
+    async checkExistByUserIdAndAccountNumber(userId,accountNumber){
+        const ans = await db('recipient_list').where({
+            user_id: userId,
+            account_number: accountNumber
+        }).select();
+        return ans.length > 0 ? ans[0] : null
+    }
 };

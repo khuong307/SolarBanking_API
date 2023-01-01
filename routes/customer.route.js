@@ -304,7 +304,7 @@ router.post("/transaction/:id/otp", async (req, res) => {
         // Generate otp
         const otp = generateOtp()
         // update new otp code to transaction_table
-        await transactionModel.genericMethods.update(transactionId, { ...dataTransaction, otp_code: otp })
+        await transactionModel.genericMethods.update(transactionId, { ...dataTransaction, otp_code: otp})
 
         // Send otp to user through email
         const subject = "Transfer Money"
@@ -388,7 +388,7 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
         }
 
         // Check banking account existed in db
-        if (!await bankingAccountModel.checkExistBy(infoTransaction.des_account_number, infoTransaction.bank_code)) {
+        if (await bankingAccountModel.genericMethods.findById(infoTransaction.des_account_number)===null) {
             // Add new banking account to db
             const newBankAccount = {
                 account_number: infoTransaction.des_account_number,
@@ -559,6 +559,7 @@ router.post("/intertransaction/:id", async (req, res) => {
         const { encryptToken, bank_code } = desEncryptedInfo.data.encryptedData
         // Get public key based on bank_code from infoVerification
         const bankInfo = await bankModel.genericMethods.findById(bank_code)
+        console.log(bankInfo)
         // Check other bank is exist in database
         if (bankInfo === null) {
             return res.status(400).json({
@@ -734,7 +735,7 @@ router.get("/intertransaction", async (req, res) => {
         }
 
         // Check src banking account existed in db
-        if (!await bankingAccountModel.checkExistBy(infoReceive.src_account_number, bank_code)) {
+        if (await bankingAccountModel.genericMethods.findById(infoReceive.src_account_number)===null) {
             // Add new banking account to db
             const newBankAccount = {
                 account_number: infoReceive.src_account_number,
@@ -781,6 +782,33 @@ router.get("/intertransaction", async (req, res) => {
             message: "Can not done the transaction"
         })
     }
+})
+
+
+// Save recipient to recipient list
+router.post("/save",async(req,res)=>{
+    const infoRecipient = req.body
+    try{
+        let result = -1
+        const recipient = await recipientModel.checkExistByUserIdAndAccountNumber(infoRecipient.user_id,infoRecipient.account_number)
+        // Check account_number exist in db => if exist update nick_name, otherwise add to db
+        if(recipient ===null){
+            result = await recipientModel.genericMethods.add(infoRecipient)
+        }else{
+            result = await recipientModel.updateNickNameByUserIdAndAccountNumber(infoRecipient.user_id,infoRecipient.account_number,infoRecipient.nick_name)
+        }
+        return res.status(200).json({
+            isSuccess:true,
+            result
+        })
+    }catch(err){
+        console.log(err)
+        return res.status(500).json({
+            isSuccess:false,
+            message:"Can not save recipient"
+        })
+    }
+   
 })
 
 
