@@ -360,8 +360,12 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
             })
         }
 
+        const payload = {
+            des_account_number: infoTransaction.des_account_number,
+            des_bank_code: infoTransaction.bank_code
+        }
         // Encrypt des_account_number by private key
-        const token = await jwt.generateAsyncToken(infoTransaction.des_account_number, process.env.PRIVATE_KEY, EXPIRED_RSA_TIME)
+        const token = await jwt.generateAsyncToken(payload, process.env.PRIVATE_KEY, EXPIRED_RSA_TIME)
         const infoVerification = { token: token, bank_code: "SLB" }
 
         // Sending des_account_number to other bank to query info
@@ -451,8 +455,20 @@ router.get("/desaccount", async (req, res) => {
         })
     }
 
+    console.log(decodedInfo)
+
     // Get info des_account_number
-    const account_number = decodedInfo.payload.payload
+    const account_number = decodedInfo.payload.payload.des_account_number
+    const des_bank_code = decodedInfo.payload.payload.des_bank_code
+
+    // Check des_account_number existed based on account number and bank code
+    if (!await bankingAccountModel.checkExistBy(account_number, des_bank_code)) {
+        return res.status(400).json({
+            isSuccess: false,
+            message: "Can not find user by account number"
+        })
+    }
+
     const infoRecipient = await bankingAccountModel.getInfoUserBy(account_number)
     if (infoRecipient === null) {
         return res.status(400).json({
@@ -614,7 +630,7 @@ router.post("/intertransaction/:id", async (req, res) => {
 })
 
 
-// -------------- IN CASE RECEIVE MONEY FROM OTHER BANKS FINAL STEP
+// -------------- IN CASE RECEIVE MONEY FROM OTHER BANKS FINAL STEP ------------------------------//
 router.get("/intertransaction", async (req, res) => {
     const { token, bank_code } = req.body
     console.log(req.body)
@@ -648,6 +664,7 @@ router.get("/intertransaction", async (req, res) => {
     }
 
     const infoReceive = decodedInfo.payload.payload
+    console.log(infoReceive)
     const newUser = {
         full_name: infoReceive?.full_name,
         email: infoReceive?.email,
@@ -746,7 +763,7 @@ router.get("/intertransaction", async (req, res) => {
         delete desInfo.balance
         // Encrypt data to send back to other bank
         const encryptToken = await jwt.generateAsyncToken(desInfo, process.env.PRIVATE_KEY, EXPIRED_RSA_TIME)
-        const encryptedData = { encryptToken, bank_code: "TCB" }
+        const encryptedData = { encryptToken, bank_code: "SLB" }
 
         await trx.commit()
         console.log(result)
