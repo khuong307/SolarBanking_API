@@ -5,10 +5,9 @@ import { BANK_CODE } from '../utils/bank_constanst.js';
 export default {
     genericMethods: generate('banking_account', 'account_number'),
 
-    findByUserId(userId) {
-        return db('banking_account').where({
-            user_id: userId
-        }).select();
+    async findByUserId(userId) {
+        const res = await db('banking_account').where('user_id',userId).select();
+        return res.length > 0 ? res[0]: null
     },
 
     findByUserIdAndAccountType(userId, accountType) {
@@ -17,18 +16,30 @@ export default {
             is_spend_account: accountType
         }).select();
     },
-    getInfoRecipientBy(account_number){
-        return db('banking_account').where('account_number',account_number)
+    async getInfoRecipientBy(account_number){
+        const res = await db('banking_account').where('account_number',account_number)
             .join('user','banking_account.user_id','=','user.user_id')
             .select('user.user_id',
-                    'user.full_name',
-                    'user.email',
-                    'user.phone',
-                    'banking_account.balance');
+                'user.full_name',
+                'user.email',
+                'user.phone',
+                'banking_account.balance');
+        return res;
     },
-    async updateAccountBalance(accountNumber,amount,type){
-        const obj = await db('banking_account').where('account_number',accountNumber)
-                                         .orWhere('user_id',accountNumber).select();
+    async getInfoRecipientById(user_id){
+        const res = await db('banking_account').where('user_id',user_id)
+            .join('user','banking_account.user_id','=','user.user_id')
+            .select('user.user_id',
+                'user.full_name',
+                'user.email',
+                'user.phone',
+                'banking_account.balance',
+                'banking_account.account_number');
+        return res;
+    },
+    async updateAccountBalance(paramUser,amount,type){
+        const obj = await db('banking_account').where('account_number',paramUser)
+                                         .orWhere('user_id',paramUser).select();
         let balance
         if (obj.length > 0){
             //payment
@@ -39,7 +50,9 @@ export default {
             else{
                 balance = parseInt(obj[0].balance + amount);
             }
-            await db('banking_account').where('account_number',accountNumber).update('balance',balance);
+            await db('banking_account').where('account_number',paramUser)
+                                       .orWhere('user_id',paramUser)
+                                        .update('balance',balance);
             return true;
         }
         return false;

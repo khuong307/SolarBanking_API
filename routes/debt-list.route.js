@@ -121,7 +121,7 @@ router.get("/:userId/otherMade",async function(req,res){
 })
 
 //Get detail of debt by debtId API : /api/debtList/:debtId
-router.get("/:debtId",authRole(role.CUSTOMER),async function(req,res,next){
+router.get("/:debtId",async function(req,res,next){
     try {
         const _debtId= +req.params.debtId || 0;
         const objDebt = await debtListModel.getDebtById(_debtId)
@@ -192,19 +192,24 @@ router.post("/",validate(debtCreateSchema),async function(req,res){
 })
 
 //send OTP and create temp transaction API: /api/debtList/sendOtp
-router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
+router.post("/sendOtp",async function(req,res,next){
     try{
-        const senderId = +req.body.user_id || 0;
+        const userId = +req.body.user_id || 0;
         const debtId = +req.body.debt_id || 0;
         const otp = createOTP();
         const debtInfo = await debtListModel.genericMethods.findById(debtId);
         if(debtInfo != null){
             const debtorAccountNumber = debtInfo.debt_account_number;
-            const bankingInfoSender = bankingAccountModel.findByUserId(senderId);
-            const debtorInfo = bankingAccountModel.getInfoRecipientBy(debtorAccountNumber);
-            const emailDebtor = debtorInfo != null ? debtorInfo.email : '';
-            const nameDebtor = debtorInfo != null ? debtorInfo.full_name : '';
-            const balanceDebtor = debtorInfo != null ? debtorInfo.balance : 0;
+            const senderId = debtInfo.user_id;
+            const bankingInfoUser = await bankingAccountModel.findByUserId(userId);
+            const userAccountNumber = bankingInfoUser.account_number;
+            const debtorInfo = await bankingAccountModel.getInfoRecipientBy(userAccountNumber);
+            const senderInfo = await bankingAccountModel.getInfoRecipientById(senderId)
+
+            const emailDebtor = debtorInfo.count > 0 ? debtorInfo[0].email : "";
+            const nameDebtor = debtorInfo.count > 0 ? debtorInfo[0].full_name : "";
+            const balanceDebtor = debtorInfo.count > 0 ? debtorInfo[0].balance : 0;
+
             const checkBalance = await bankingAccountModel.checkBalanceOfUserByAccountNumber(debtorAccountNumber,balanceDebtor);
             if (!checkBalance){
                 return res.status(500).json({
@@ -214,7 +219,7 @@ router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
             }
             //Create transaction
             let newTransaction = {
-                src_account_number: bankingInfoSender != null ? bankingInfoSender[0].account_number : "",
+                src_account_number: senderInfo.count > 0 ? senderInfo[0].account_number : "",
                 des_account_number: debtorAccountNumber,
                 transaction_amount: debtInfo.debt_amount > 0 ? debtInfo.debt_amount : 0,
                 otp_code: otp,
@@ -223,19 +228,21 @@ router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
                 is_success: 0,
                 transaction_type: 1
             };
+            console.log(newTransaction);
             const ret = transactionsModel.genericMethods.add(newTransaction);
-            //Template mail
+            const transactionId = ret[0];
+            //update transaction_id in debt table
+            debtListModel.updateTransIdDebtPayment(debtId,transactionId);
+
+            //Send otp mail for debtor
             const VERIFY_EMAIL_SUBJECT = 'Solar Banking: Please verify your payment';
             const OTP_MESSAGE = `
             Dear ${nameDebtor},\n
             Here is the OTP code you need to verified payment: ${otp}.\n
-            This code will be expired 5 minutes after this email was sent. If you did not make this request, you can ignore this email.   
+            This code will be expired 5 minutes after this email was sent. If you did not make this request, you can ignore this email.
             `;
             sendEmail(emailDebtor, VERIFY_EMAIL_SUBJECT, OTP_MESSAGE);
 
-            const transactionId = ret[0];
-            //update transaction_id in debt table
-            debtListModel.updateTransIdDebtPayment(debtId,transactionId);
             res.status(200).json({
                 isSuccess: true,
                 message: "OTP code has been sent. Please check your email"
@@ -258,27 +265,28 @@ router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
 router.post("/internal/verified-payment",authRole(role.CUSTOMER),async function(req,res,next){
     try{
         const _debtId = +req.body.debt_id || 0;
+        const _userId = +req.body.user_id || 0;
         const _otp = +req.body.otp || '';
         const debtDetail = await debtListModel.genericMethods.findById(_debtId);
         if (debtDetail !== null){
-            const senderId = debtDetail.user_id;
-            const recipientAccount = debtDetail.debt_account_number;
+            const senderId = _userId;
+            const recipientId = debtDetail.user_id;
             const debt_amount = debtDetail.debt_amount;
             const transId = debtDetail.paid_transaction_id;
             const transDetail = await transactionsModel.genericMethods.findById(transId);
             //Step 1: Verified OTP code
             if (_otp === transDetail.otp_code && moment().isBefore(transDetail.transaction_created_at)){
                 //Step 2: Update status for debt detail
-                debtListModel.updateStatusDebtPayment(_debtId,debt_status.PAID);
+                await debtListModel.updateStatusDebtPayment(_debtId,debt_status.PAID);
                 //Step 3: Update status of transaction
-                transactionsModel.updateStatusTransaction(transId,1);
+                await transactionsModel.updateStatusTransaction(transId,1);
                 //Step 4.1: Update account balance of debtor
-                await bankingAccountModel.updateAccountBalance(recipientAccount,debt_amount,1);
+                await bankingAccountModel.updateAccountBalance(senderId,debt_amount,1);
                 //Step 4.2: Update account balance of debt reminder
-                await bankingAccountModel.updateAccountBalance(senderId,debt_amount,2);
+                await bankingAccountModel.updateAccountBalance(recipientId,debt_amount,2);
                 //Step 5: Send notify for debt reminder
                 let newNotify = {
-                    user_id: senderId,
+                    user_id: recipientId,
                     transaction_id: transId,
                     debt_id: _debtId,
                     notification_message: `Debit code ${_debtId} has just been paid. Please check your account`,
@@ -313,16 +321,18 @@ router.post("/internal/verified-payment",authRole(role.CUSTOMER),async function(
 //Cancel debt by debtId API: /api/debtList/cancelDebt/:debtId
 router.delete("/cancelDebt/:debtId",validate(debtCancelSchema),authRole(role.CUSTOMER),async function(req,res,next){
     try {
-        const _debtId = +req.params.debtId || 0;
+        const _debtId = +req.params.debt_id || 0;
         const _userId = +req.body.user_id || 0;
         const messageCancel = req.body.debt_cancel_message || '';
         const objDebt = await debtListModel.getDebtById(_debtId);
         if (objDebt != null){
-            //if cancel your debt
+            //if cancel your debt remind
             if (_userId === objDebt.user_id)
             {
-                const recipientId = _userId; //send to yourself
-                const transactionId = objDebt.paid_transaction_id
+                const bankingInfoRecipient = await bankingAccountModel.getInfoRecipientBy(objDebt.debt_account_number);
+                const recipientId = bankingInfoRecipient[0].user_id;
+                const transactionId = objDebt.paid_transaction_id;
+                //send notify for debtor
                 let newNotify = {
                     user_id: recipientId,
                     transaction_id: transactionId,
@@ -335,12 +345,11 @@ router.delete("/cancelDebt/:debtId",validate(debtCancelSchema),authRole(role.CUS
             }
             else{
                 //if cancel debt of another
-                const userAccountNumber = objDebt.debt_account_number;
-                const recipientBanking = await bankingAccountModel.genericMethods.findById(userAccountNumber);
-                const recipientId = recipientBanking.length > 0 ? recipientBanking[0].user_id : 0; //send to yourself
+                const reminderId = objDebt.user_id;
                 const transactionId = objDebt.paid_transaction_id;
+                //send notify for debt reminder
                 let newNotify = {
-                    user_id: recipientId,
+                    user_id: reminderId,
                     transaction_id: transactionId,
                     debt_id: _debtId,
                     notification_message: messageCancel,
@@ -349,7 +358,7 @@ router.delete("/cancelDebt/:debtId",validate(debtCancelSchema),authRole(role.CUS
                 //add new notification
                 notificationModel.genericMethods.add(newNotify);
             }
-            const result = debtListModel.updateStatusDebtPayment(_debtId,debt_status.CANCEL);
+            const result = await debtListModel.updateStatusDebtPayment(_debtId,debt_status.CANCEL);
 
             res.status(200).json({
                 isSuccess: true,

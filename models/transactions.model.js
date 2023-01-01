@@ -7,8 +7,8 @@ dotenv.config();
 
 export default {
     genericMethods: generate('transaction', 'transaction_id'),
-    updateStatusTransaction(transactionId,is_success) {
-        return db('transaction')
+    async updateStatusTransaction(transactionId,is_success) {
+        const res = await db('transaction')
             .where({
                 transaction_id: transactionId
             })
@@ -16,5 +16,6 @@ export default {
                 is_success: 1,
                 transaction_created_at: moment().toDate()
             });
+        return res
     },
 };

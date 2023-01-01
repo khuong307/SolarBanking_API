@@ -16,14 +16,15 @@ export default {
         const obj =  await db(TABLE_NAME).where('debt_id',debtId).select();
         return obj.length > 0 ? obj[0] : null;
     },
-    updateStatusDebtPayment(debtId,status){
-        return db(TABLE_NAME)
+    async updateStatusDebtPayment(debtId,status){
+        const res = await db(TABLE_NAME)
             .where({
                 debt_id: debtId
             })
             .update({
                 debt_status: status
             });
+        return res
     },
     updateTransIdDebtPayment(debtId,transId){
         return db(TABLE_NAME)
