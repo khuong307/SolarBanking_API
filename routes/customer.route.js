@@ -62,7 +62,6 @@ router.get("/:userId/bankaccount", validateParams, async (req, res) => {
 // FIrst step : Check Info Inter Transaction Before Real Transfer
 router.post("/:userId/intratransaction", validateParams, async (req, res) => {
     const infoTransaction = req.body
-    console.log(infoTransaction)
     const userId = +req.params.userId
     try {
         // Check src_account_number is existed (belong to userId)
@@ -73,7 +72,6 @@ router.post("/:userId/intratransaction", validateParams, async (req, res) => {
                 message: "source account number is invalid"
             })
         }
-
         // Check amount of money is valid corresponding to account_number
         if (infoTransaction.transaction_amount > result_src[0].balance) {
             return res.status(403).json({
@@ -105,8 +103,6 @@ router.post("/:userId/intratransaction", validateParams, async (req, res) => {
                 transaction_type: 1
             }
         })
-
-
     } catch (err) {
         console.log(err)
         return res.status(500).json({

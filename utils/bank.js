@@ -97,23 +97,25 @@ export function generateRefreshToken(){
 
 export async function filterTransactionByTypeAndDes(transactions, type, src, isSLB) {
     const ans = []
-    for (const trans of transactions) {
-        if (trans.transaction_type == type && trans.is_success == 1) {
-            const other_side = src == 1 ? trans.des_account_number : trans.src_account_number
-            const other = await banking_accountModel.genericMethods.findByCol("account_number", other_side)
-            delete trans.otp_code
-            if (isSLB == true) {
-                if (trans.src_account_number == "SLB") {
-                    const info = await userModel.genericMethods.findById(other.user_id)
-                    trans.other_fullname = info.full_name
-                    ans.push(trans)
-                }
-            } else {
-                if (isSLB == false) {
-                    if (trans.src_account_number != "SLB") {
+    if (transactions != null){
+        for (const trans of transactions) {
+            if (trans.transaction_type == type && trans.is_success == 1) {
+                const other_side = src == 1 ? trans.des_account_number : trans.src_account_number
+                const other = await banking_accountModel.genericMethods.findByCol("account_number", other_side)
+                delete trans.otp_code
+                if (isSLB == true) {
+                    if (trans.src_account_number == "SLB") {
                         const info = await userModel.genericMethods.findById(other.user_id)
                         trans.other_fullname = info.full_name
                         ans.push(trans)
+                    }
+                } else {
+                    if (isSLB == false) {
+                        if (trans.src_account_number != "SLB") {
+                            const info = await userModel.genericMethods.findById(other.user_id)
+                            trans.other_fullname = info.full_name
+                            ans.push(trans)
+                        }
                     }
                 }
             }

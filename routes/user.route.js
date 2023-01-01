@@ -203,7 +203,6 @@ router.get('/:userId/history', validateParams, authUser, authRole(role.CUSTOMER)
             userInfo = c
         }
     }
-
     if (userInfo == null){
         return res.status(209).json({
             isFound: false,
