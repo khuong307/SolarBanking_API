@@ -16,6 +16,9 @@
     "debt_message": {
       "type": "string"
     },
+    "debt_status": {
+      "enum": ["PAID","NOT PAID","CANCEL"]
+    },
     "paid_transaction_id": {
       "type": "number"
     },
