@@ -1,4 +1,5 @@
 import express from "express"
+import md5 from "md5"
 import bankingAccountModel from "../models/banking-account.model.js"
 import recipientModel from "../models/recipient.model.js"
 import validate, { validateParams } from '../middlewares/validate.mdw.js';
@@ -360,29 +361,38 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
             })
         }
 
+
+        // Prepare data to send to other bank to get info des_account_number
         const payload = {
-            des_account_number: infoTransaction.des_account_number,
-            des_bank_code: infoTransaction.bank_code
+            accountNumber:infoTransaction.des_account_number,
+            slug:BANK_CODE
         }
+        let data = JSON.stringify(payload)
+        const timestamp = Date.now()
         // Encrypt des_account_number by private key
-        const token = await jwt.generateAsyncToken(payload, process.env.PRIVATE_KEY, EXPIRED_RSA_TIME)
-        const infoVerification = { token: token, bank_code: "SLB" }
+        const msgToken = md5(timestamp+data+process.env.SECRET_KEY)
+        const infoVerification = { 
+            accountNumber:infoTransaction.des_account_number,
+            timestamp:timestamp,
+            msgToken:msgToken,
+            slug:BANK_CODE
+         }
 
         // Sending des_account_number to other bank to query info
         const result = await axios({
-            url: "http://localhost:3050/api/customers/desaccount",
-            method: "GET",
+            url: "http://ec2-3-80-72-113.compute-1.amazonaws.com:3001/accounts/external/get-info",
+            method: "POST",
             data: infoVerification
         })
-        const result_des = result.data.infoRecipient
+        const result_des = result.data.data.user
 
         let des_user_id = -1
         // Check des user is not existed in db
-        if (!await userModel.checkExistBy(result_des.full_name, result_des.email, result_des.phone)) {
+        if (!await userModel.checkExistByFullName(result_des.name)) {
             const newUser = {
-                full_name: result_des.full_name,
-                email: result_des.email,
-                phone: result_des.phone
+                full_name: result_des.name,
+                email: "",
+                phone: ""
             }
             des_user_id = await trx("user").insert(newUser)
         }
@@ -407,9 +417,9 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
             message: "Confirm transaction is valid",
             infoTransaction: {
                 ...infoTransaction,
-                full_name: result_des.full_name,
-                email: result_des.email,
-                phone: result_des.phone,
+                full_name: result_des.name,
+                email:"",
+                phone:"",
                 transaction_type: 2
             }
         })
