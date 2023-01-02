@@ -17,6 +17,7 @@ import userRoute from './routes/user.route.js';
 import debtListRoute from "./routes/debt-list.route.js";
 import employeeRoute from "./routes/employee.route.js";
 import customerRoute from "./routes/customer.route.js";
+import adminRoute from "./routes/admin.route.js";
 import bankRoute from "./routes/bank.route.js";
 
 const app = express();
@@ -35,7 +36,8 @@ app.use('/api/users', userRoute);
 app.use('/api/debtList', debtListRoute);
 app.use('/api/employee', employeeRoute);
 app.use('/api/customers',customerRoute);
-app.use("/api/banks",bankRoute);
+app.use('/api/admin',adminRoute);
+app.use('/api/banks',bankRoute);
 
 app.get('/err', function (req, res) {
     throw new Error('Error!');
