@@ -237,8 +237,12 @@ router.post("/intratransaction/:id", async (req, res) => {
         const infoDesUser = await userModel.genericMethods.findById(desBankAccount.user_id)
         const infoSrcUser = await userModel.genericMethods.findById(srcBankAccount.user_id)
 
+        // Check des_account_number is saved to table recipient
+        const isSavedRecipientTable = await recipientModel.checkExistByUserIdAndAccountNumber(srcBankAccount.user_id, desBankAccount.account_number)
+
         // Create info Transaction to send to client
         const infoTransaction = {
+            isSavedRecipientTable,
             full_name: infoDesUser.full_name,
             bank: "SOLAR BANKING",
             des_account_number: desBankAccount.account_number,
@@ -300,7 +304,7 @@ router.post("/transaction/:id/otp", async (req, res) => {
         // Generate otp
         const otp = generateOtp()
         // update new otp code to transaction_table
-        await transactionModel.genericMethods.update(transactionId, { ...dataTransaction, otp_code: otp})
+        await transactionModel.genericMethods.update(transactionId, { ...dataTransaction, otp_code: otp })
 
         // Send otp to user through email
         const subject = "Transfer Money"
@@ -384,7 +388,7 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
         }
 
         // Check banking account existed in db
-        if (await bankingAccountModel.genericMethods.findById(infoTransaction.des_account_number)===null) {
+        if (await bankingAccountModel.genericMethods.findById(infoTransaction.des_account_number) === null) {
             // Add new banking account to db
             const newBankAccount = {
                 account_number: infoTransaction.des_account_number,
@@ -592,8 +596,17 @@ router.post("/intertransaction/:id", async (req, res) => {
 
         await trx.commit()
 
+        let isSavedRecipientTable = false
+        // Check des_account_number is saved to table recipient
+        const resultRecipient = await recipientModel.checkExistByUserIdAndAccountNumber(srcBankAccount.user_id,dataTransaction.des_account_number)
+        if(resultRecipient === null){
+            isSavedRecipientTable = false
+        }else{
+            isSavedRecipientTable = true
+        }
         // Create info Transaction to send to client
         const infoTransaction = {
+            isSavedRecipientTable,
             full_name: infoDesUser.full_name,
             bank: bankInfo.bank_name,
             des_account_number: dataTransaction.des_account_number,
@@ -731,7 +744,7 @@ router.get("/intertransaction", async (req, res) => {
         }
 
         // Check src banking account existed in db
-        if (await bankingAccountModel.genericMethods.findById(infoReceive.src_account_number)===null) {
+        if (await bankingAccountModel.genericMethods.findById(infoReceive.src_account_number) === null) {
             // Add new banking account to db
             const newBankAccount = {
                 account_number: infoReceive.src_account_number,
@@ -782,29 +795,29 @@ router.get("/intertransaction", async (req, res) => {
 
 
 // Save recipient to recipient list
-router.post("/save",async(req,res)=>{
+router.post("/save", async (req, res) => {
     const infoRecipient = req.body
-    try{
+    try {
         let result = -1
-        const recipient = await recipientModel.checkExistByUserIdAndAccountNumber(infoRecipient.user_id,infoRecipient.account_number)
+        const recipient = await recipientModel.checkExistByUserIdAndAccountNumber(infoRecipient.user_id, infoRecipient.account_number)
         // Check account_number exist in db => if exist update nick_name, otherwise add to db
-        if(recipient ===null){
+        if (recipient === null) {
             result = await recipientModel.genericMethods.add(infoRecipient)
-        }else{
-            result = await recipientModel.updateNickNameByUserIdAndAccountNumber(infoRecipient.user_id,infoRecipient.account_number,infoRecipient.nick_name)
+        } else {
+            result = await recipientModel.updateNickNameByUserIdAndAccountNumber(infoRecipient.user_id, infoRecipient.account_number, infoRecipient.nick_name)
         }
         return res.status(200).json({
-            isSuccess:true,
+            isSuccess: true,
             result
         })
-    }catch(err){
+    } catch (err) {
         console.log(err)
         return res.status(500).json({
-            isSuccess:false,
-            message:"Can not save recipient"
+            isSuccess: false,
+            message: "Can not save recipient"
         })
     }
-   
+
 })
 
 
