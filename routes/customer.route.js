@@ -449,6 +449,7 @@ router.get("/desaccount", async (req, res) => {
         })
     }
 
+    console.log(bankInfo)
     // Verify exactly other bank is send this message
     if (await jwt.verifyAsyncToken(token, bankInfo.public_key, EXPIRED_RSA_TIME) === null) {
         return res.status(403).json({
@@ -683,8 +684,10 @@ router.get("/intertransaction", async (req, res) => {
         })
     }
 
-    const infoReceive = decodedInfo.payload.payload
-    console.log(infoReceive)
+    console.log("decodeInfo: ",decodedInfo)
+
+    const infoReceive = decodedInfo.payload.infoTransaction
+    console.log("infoReceive: ",infoReceive)
     const newUser = {
         full_name: infoReceive?.full_name,
         email: infoReceive?.email,
