@@ -12,5 +12,10 @@ export default {
     async checkExistBy(fullName,email,phone){
         const ans = await db('user').where({full_name:fullName}).andWhere({email:email}).andWhere({phone:phone})
         return ans.length > 0 ? true: false
+    },
+
+    async checkExistByFullName(fullName){
+        const ans = await db("user").where({full_name:fullName})
+        return ans.length > 0 ? true :false
     }
 };
