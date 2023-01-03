@@ -1,3 +1,85 @@
+/**
+ * @swagger
+ * tags:
+ *   name: Customer Transaction
+ *   description: API to handle transfer money such as intrabank and interbank transfer.
+ * components:
+ *   schemas:
+ *     Transaction:
+ *       type: object
+ *       required:
+ *         - src_account_number
+ *         - des_account_number
+ *         - transaction_amount
+ *         - otp_code
+ *         - pay_transaction_fee
+ *         - is_success
+ *         - transaction_type
+ *       properties:
+ *         src_account_number:
+ *           type: string
+ *           description: The account number of sender.
+ *         des_account_number:
+ *           type: string
+ *           description: The account number of recipient.
+ *         transaction_amount:
+ *           type: integer
+ *           description: The amount of money.
+ *         otp_code:
+ *           type: string
+ *           description: A string is used to verify transfer.
+ *         transaction_message:
+ *           type: string
+ *           description: message of a transaction.
+ *         pay_transaction_fee:
+ *           type: string
+ *           description: type of transfer
+ *         is_success:
+ *           type: boolean
+ *           description: status of transaction
+ *         transaction_type:
+ *           type: int
+ *           description: type of transaction
+ *       example:
+ *          src_account_number: "11111"
+ *          des_account_number: "22222"
+ *          transaction_amount: 50000000
+ *          otp_code: "345678"
+ *          transaction_message: "Transfer money"
+ *          pay_transaction_fee: "SRC"
+ *          is_success: 1
+ *          transaction_type: 1
+ *     BankingAccount:
+ *       type: object
+ *       required:
+ *         - account_number
+ *         - user_id
+ *         - bank_code
+ *       properties:
+ *         account_number:
+ *           type: string
+ *           description: The account number of user.
+ *         balance:
+ *           type: int
+ *           description: The amount of money of an account.
+ *         user_id:
+ *           type: integer
+ *           description: unique identify of a user.
+ *         bank_code:
+ *           type: string
+ *           description: unique identify of a bank.
+ *         is_spend_account:
+ *           type: boolean
+ *           description: status of bank account.
+ *       example:
+ *          account_number: "11111"
+ *          balance: 50000000
+ *          user_id: 1
+ *          bank_code: "SLB"
+ *          is_spend_account: 1
+ */
+
+
 import express from "express"
 import md5 from "md5"
 import bankingAccountModel from "../models/banking-account.model.js"
@@ -18,10 +100,60 @@ import db from "../utils/db.js";
 
 const router = express.Router()
 
+/**
+ * @swagger
+ * /customers/{userId}/bankaccounts:
+ *   get:
+ *     summary: Find all bank accounts of a user
+ *     tags: [Customer Transaction]
+ *     parameters:
+ *     - name: userId
+ *       in: path
+ *       description: User id to find bank account belong to this user
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     responses:
+ *       "200":
+ *         description: Successfully get all bank accounts.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The status
+ *                 bankAccounts:
+ *                   type: array
+ *                   description: list of bank accounts of user
+ *                   items:
+ *                     $ref: '#/components/schemas/BankingAccount'
+ *       "400":
+ *         description: Unsuccessfully get all bank accounts.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: "There is no bank account for this user"
+ *       "500":
+ *         description: Unsuccessfully get all bank accounts.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: "Can not get bank accounts"
+ */
 router.get("/:userId/bankaccounts", validateParams, async (req, res) => {
     const userId = +req.params.userId
     try {
         const bankAccounts = await bankingAccountModel.findByUserIdAndAccountType(userId, 1)
+        if(bankAccounts.length <=0){
+            return res.status(400).json({
+                isSuccess:false,
+                message:"There is no bank account for this user"
+            })
+        }
         return res.status(200).json({
             isSuccess: true,
             bankAccounts
@@ -35,14 +167,66 @@ router.get("/:userId/bankaccounts", validateParams, async (req, res) => {
     }
 })
 
+
+/**
+ * @swagger
+ * /customers/{userId}/bankaccount:
+ *   get:
+ *     summary: Find bank SLB of a user
+ *     tags: [Customer Transaction]
+ *     parameters:
+ *     - name: userId
+ *       in: path
+ *       description: User id to find bank account belong to this user
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     responses:
+ *       "200":
+ *         description: Successfully get bank account.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The status
+ *                 bankAccount:
+ *                   type: object
+ *                   description: bank account of this user
+ *             example:
+ *                 isSuccess: true
+ *                 bankAccount: {
+ *                    account_number: "01325183",
+ *                    balance: 121391300,
+ *                    user_id: 40,
+ *                    bank_code: "SLB",
+ *                    is_spend_account: 1
+ *                 }
+ *       "400":
+ *         description: Unsuccessfully get bank account.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: "There is no bank account for this user"
+ *       "500":
+ *         description: Unsuccessfully get bank account.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: "Can not get bank account"
+ */
 router.get("/:userId/bankaccount", validateParams, async (req, res) => {
     const userId = +req.params.userId
     try {
         const bankAccount = await bankingAccountModel.findByUserIdAndBankCode(userId)
         if (bankAccount === null) {
-            return res.status(403).json({
+            return res.status(400).json({
                 isSuccess: false,
-                message: "Can not get bank account"
+                message: "There is no bank account for this user"
             })
         }
         return res.status(200).json({
@@ -60,6 +244,109 @@ router.get("/:userId/bankaccount", validateParams, async (req, res) => {
 
 // ------------------ INTERBANK: CHUYEN KHOAN NOI BO -------------------- //
 
+/**
+ * @swagger
+ * /customers/{userId}/intratransaction:
+ *   post:
+ *     summary: FIrst step - Check Info Inter Transaction Before Real Transfer
+ *     tags: [Customer Transaction]
+ *     parameters:
+ *     - name: userId
+ *       in: path
+ *       description: User id to find bank account belong to this user
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     requestBody:
+ *       description: Info Transaction
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               src_account_number:
+ *                 type: string
+ *                 description: The bank account of sender.
+ *               des_account_number:
+ *                 type: string
+ *                 description: The bank account of recipient.
+ *               bank_code:
+ *                 type: string
+ *                 description: The code of bank's recipient
+ *               transaction_amount:
+ *                 type: int
+ *                 description: The amount of money transfer
+ *               transaction_message:
+ *                 type: string
+ *                 description: The message of transaction
+ *               pay_transaction_fee:
+ *                 type: string
+ *                 description: Type of transaction
+ *           example:
+ *             src_account_number: "11111"
+ *             des_account_number: "01325183"
+ *             bank_code: "SLB"
+ *             transaction_amount: 500000
+ *             transaction_message: "Transfer Money"
+ *             pay_transaction_fee: "SRC"
+ *     responses:
+ *       "200":
+ *         description: Confirm information transaction is valid.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The status
+ *                 message:
+ *                   type: string
+ *                   description: Confirm transaction is valid                 
+ *                 infoTransaction:
+ *                   type: object
+ *                   description: information of transaction includes recipient information
+ *             example:
+ *                 isSuccess: true
+ *                 message: "Confirm transaction is valid"
+ *                 infoTransaction: {
+ *                    src_account_number: "11111",
+ *                    des_account_number: "01325183",
+ *                    bank_code: "SLB",
+ *                    transaction_amount: "SLB",
+ *                    transaction_message: "Transfer Money",
+ *                    pay_transaction_fee: "SRC",
+ *                    full_name: "Lam Thanh Hong",
+ *                    email: "hong8877@gmail.com",
+ *                    phone: "1902445452",
+ *                    transaction_type: 1
+ *                 }
+ *       "400":
+ *         description: Valid Intra Transaction failed.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Money transaction invalid:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: "Money transaction is invalid"
+ *               Not existed src_account_number:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: "source account number is invalid"
+ *               Not existed des_account_number:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: "destination account number is invalid"
+ *       "500":
+ *         description: Invalid Information Intra Transaction.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: "Can not confirm the transaction"
+ */
+
 // FIrst step : Check Info Inter Transaction Before Real Transfer
 router.post("/:userId/intratransaction", validateParams, async (req, res) => {
     const infoTransaction = req.body
@@ -68,14 +355,14 @@ router.post("/:userId/intratransaction", validateParams, async (req, res) => {
         // Check src_account_number is existed (belong to userId)
         const result_src = await bankingAccountModel.findByUserIdAndAccountNumber(userId, infoTransaction.src_account_number)
         if (result_src.length === 0) {
-            return res.status(403).json({
+            return res.status(400).json({
                 isSuccess: false,
                 message: "source account number is invalid"
             })
         }
         // Check amount of money is valid corresponding to account_number
         if (infoTransaction.transaction_amount > result_src[0].balance) {
-            return res.status(403).json({
+            return res.status(400).json({
                 isSuccess: false,
                 message: "Money transaction is invalid"
             })
@@ -84,7 +371,7 @@ router.post("/:userId/intratransaction", validateParams, async (req, res) => {
         // Check des_account_number is existed
         const result_des = await bankingAccountModel.findByAccountNumberAndBankCode(infoTransaction.des_account_number, infoTransaction.bank_code)
         if (result_des.length === 0) {
-            return res.status(403).json({
+            return res.status(400).json({
                 isSuccess: false,
                 message: "destination account number is invalid"
             })
