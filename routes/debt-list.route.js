@@ -112,7 +112,7 @@ router.get("/:debtId",authRole(role.CUSTOMER),async function(req,res,next){
 })
 
 //Create new debt API (internal): /api/debtList/
-router.post("/",validate(debtCreateSchema),async function(req,res){
+router.post("/",validate(debtCreateSchema),authRole(role.CUSTOMER),async function(req,res){
     try{
         const user_id = +req.body.user_id || 0;
         const debt_account_number = req.body.debt_account_number || '';
@@ -174,7 +174,7 @@ router.post("/",validate(debtCreateSchema),async function(req,res){
 })
 
 //send OTP and create temp transaction API: /api/debtList/sendOtp
-router.post("/sendOtp",async function(req,res,next){
+router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
     try{
         const userId = +req.body.user_id || 0;
         const debtId = +req.body.debt_id || 0;
@@ -287,7 +287,7 @@ router.post("/re-sendOtp",authRole(role.CUSTOMER),async function(req,res){
     }
 })
 //debt payment API (internal): /api/debtList/internal/verified-payment
-router.post("/internal/verified-payment",async function(req,res,next){
+router.post("/internal/verified-payment",authRole(role.CUSTOMER),async function(req,res,next){
     try{
         const _debtId = +req.body.debt_id || 0;
         const _userId = +req.body.user_id || 0;
