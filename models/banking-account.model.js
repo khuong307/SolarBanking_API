@@ -19,15 +19,15 @@ export default {
     async getInfoRecipientBy(account_number){
         const res = await db('banking_account').where('account_number',account_number)
             .join('user','banking_account.user_id','=','user.user_id')
-            .select('user.user_id',
+            .select('banking_account.user_id',
                 'user.full_name',
                 'user.email',
                 'user.phone',
                 'banking_account.balance');
         return res;
     },
-    async getInfoRecipientById(user_id){
-        const res = await db('banking_account').where('user_id',user_id)
+    async getInfoRecipientById(userId){
+        const res = await db('banking_account').where('user_id',userId)
             .join('user','banking_account.user_id','=','user.user_id')
             .select('user.user_id',
                 'user.full_name',

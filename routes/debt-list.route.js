@@ -129,7 +129,24 @@ router.post("/",validate(debtCreateSchema),authRole(role.CUSTOMER),async functio
             }
             //Create new debt
             const ret = await debtListModel.genericMethods.add(newDebt);
-            const recipientIndo = bankingAccountModel.getInfoRecipientBy(debt_account_number);
+            const recipientIndo = await bankingAccountModel.getInfoRecipientBy(debt_account_number);
+
+            //send notify for debt reminder
+            let newNotify = {
+                user_id: user_id,
+                transaction_id: null,
+                debt_id: ret[0],
+                notification_message: 'You have a new debt',
+                is_seen: 0,
+                notification_title: 'Debt Notice',
+                notification_created_at: new Date()
+            };
+            //add new notification
+            const results = await notificationModel.genericMethods.add(newNotify);
+            io.emit(`new-notification-${recipientIndo[0].user_id}`, {
+                notification_id: results[0],
+                ...newNotify
+            });
 
             //Send mail for recipient
             const VERIFY_EMAIL_SUBJECT = 'Solar Banking: You have new debt';
@@ -156,7 +173,7 @@ router.post("/",validate(debtCreateSchema),authRole(role.CUSTOMER),async functio
 })
 
 //send OTP and create temp transaction API: /api/debtList/sendOtp
-router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
+router.post("/sendOtp",async function(req,res,next){
     try{
         const userId = +req.body.user_id || 0;
         const debtId = +req.body.debt_id || 0;
@@ -168,13 +185,13 @@ router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
             const bankingInfoUser = await bankingAccountModel.findByUserId(userId);
             const userAccountNumber = bankingInfoUser.account_number;
             const debtorInfo = await bankingAccountModel.getInfoRecipientBy(userAccountNumber);
-            const senderInfo = await bankingAccountModel.getInfoRecipientById(senderId)
+            const senderInfo = await bankingAccountModel.findByUserId(senderId)
 
-            const emailDebtor = debtorInfo.count > 0 ? debtorInfo[0].email : "";
-            const nameDebtor = debtorInfo.count > 0 ? debtorInfo[0].full_name : "";
-            const balanceDebtor = debtorInfo.count > 0 ? debtorInfo[0].balance : 0;
+            const emailDebtor = debtorInfo[0].email || "";
+            const nameDebtor = debtorInfo[0].full_name || "";
+            const balanceDebtor = debtorInfo[0].balance || 0;
 
-            const checkBalance = await bankingAccountModel.checkBalanceOfUserByAccountNumber(debtorAccountNumber,balanceDebtor);
+            const checkBalance = await bankingAccountModel.checkBalanceOfUserByAccountNumber(userAccountNumber,balanceDebtor);
             if (!checkBalance){
                 return res.status(500).json({
                     isSuccess: false,
@@ -183,7 +200,7 @@ router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
             }
             //Create transaction
             let newTransaction = {
-                src_account_number: senderInfo.count > 0 ? senderInfo[0].account_number : "",
+                src_account_number: senderInfo.account_number,
                 des_account_number: debtorAccountNumber,
                 transaction_amount: debtInfo.debt_amount > 0 ? debtInfo.debt_amount : 0,
                 otp_code: otp,
@@ -192,13 +209,13 @@ router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
                 is_success: 0,
                 transaction_type: 1
             };
-            console.log(newTransaction);
             const ret = transactionsModel.genericMethods.add(newTransaction);
             const transactionId = ret[0];
             //update transaction_id in debt table
-            debtListModel.updateTransIdDebtPayment(debtId,transactionId);
+            const retUpdate = debtListModel.updateTransIdDebtPayment(debtId,transactionId);
 
             //Send otp mail for debtor
+            console.log(emailDebtor)
             const VERIFY_EMAIL_SUBJECT = 'Solar Banking: Please verify your payment';
             const OTP_MESSAGE = `
             Dear ${nameDebtor},\n
@@ -207,9 +224,9 @@ router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
             `;
             sendEmail(emailDebtor, VERIFY_EMAIL_SUBJECT, OTP_MESSAGE);
 
-            res.status(200).json({
+            return res.status(200).json({
                 isSuccess: true,
-                message: "OTP code has been sent. Please check your email"
+                message: "OTP code has been sent. Please check your email",
             })
         }
         res.status(500).json({
