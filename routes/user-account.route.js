@@ -1,3 +1,35 @@
+/**
+ * @swagger
+ * tags:
+ *   name: User Account
+ *   description: API to handle common features such as login, change password, reset password.
+ * components:
+ *   schemas:
+ *     UserAccount:
+ *       type: object
+ *       required:
+ *         - username
+ *         - password
+ *       properties:
+ *         username:
+ *           type: string
+ *           description: The login name.
+ *         password:
+ *           type: string
+ *           description: The login password.
+ *         user_type_id:
+ *           type: integer
+ *           description: The type of user.
+ *         refresh_token:
+ *           type: string
+ *           description: A string is used to refresh access token if expired.
+ *       example:
+ *          username: ddk992001
+ *          password: "12345"
+ *          user_type_id: 1
+ *          refresh_token: An21ahmvajg89822hbnhba
+ */
+
 import express from 'express';
 import bcrypt from 'bcrypt';
 import moment from 'moment';
@@ -23,7 +55,80 @@ const router = express.Router();
 const SALT_ROUNDS = 10;
 const salt = bcrypt.genSaltSync(SALT_ROUNDS);
 
-// Login API
+/**
+ * @swagger
+ * /accounts/authentication:
+ *   post:
+ *     summary: Login to application
+ *     tags: [User Account]
+ *     requestBody:
+ *       description: Account info
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UserAccount'
+ *           example:
+ *             username: ddk992001
+ *             password: "12345"
+ *     responses:
+ *       "200":
+ *         description: Login successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The login status.
+ *                 message:
+ *                   type: string
+ *                   description: The login message.
+ *                 accessToken:
+ *                   type: string
+ *                   description: A string is used to access authentication features.
+ *                 refreshToken:
+ *                   type: string
+ *                   description: A string is used to refresh access token if expired.
+ *                 account:
+ *                   type: object
+ *                   properties:
+ *                     user_id:
+ *                       type: integer
+ *                       description: The login user id.
+ *                     username:
+ *                       type: string
+ *                       description: The login username.
+ *                     role:
+ *                       type: string
+ *                       description: The login user role.
+ *             example:
+ *               isSuccess: true
+ *               message: Login successfully!
+ *               accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *               refreshToken: An21ahmvajg89822hbnhba
+ *               account:
+ *                 user_id: 1
+ *                 username: ddk992001
+ *                 role: Customer
+ *       "400":
+ *         description: Login failed.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Invalid schema:
+ *                 value:
+ *                 - instancePath: /password
+ *                   schemaPath: "#/properties/last_name/password"
+ *                   keyword: type
+ *                   params:
+ *                     type: string
+ *                   message: must be string
+ *               Wrong username or password:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Username or password is incorrect!
+ */
 router.post('/authentication', validate(userAccountSchema), async function(req, res) {
     const username = req.body.username;
     const password = req.body.password;
@@ -62,7 +167,81 @@ router.post('/authentication', validate(userAccountSchema), async function(req, 
     });
 });
 
-// Change password API
+/**
+ * @swagger
+ * /accounts/{userId}/password:
+ *   put:
+ *     summary: Change password
+ *     tags: [User Account]
+ *     parameters:
+ *     - name: userId
+ *       in: path
+ *       description: User id to change password
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
+ *     requestBody:
+ *       description: Password info
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               old_password:
+ *                 type: string
+ *                 description: The current password.
+ *               new_password:
+ *                 type: string
+ *                 description: The change password.
+ *           example:
+ *             old_password: "12345"
+ *             new_password: "123456"
+ *     responses:
+ *       "200":
+ *         description: Successful operation.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Change successfully:
+ *                 value:
+ *                   isSuccess: true
+ *                   message: Change password successfully!
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "400":
+ *         description: Change failed.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Invalid parameter:
+ *                 value:
+ *                   error: 'The id parameter must be a positive integer'
+ *               Not existed id:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Wrong username!
+ *               Wrong password:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Old password is incorrect!
+ *       "401":
+ *          description: Unauthorized user
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: Unauthorized user!
+ */
 router.put('/:userId/password', validateParams, authUser, async function(req, res) {
     const userId = +req.params.userId || 0;
     const oldPassword = req.body.old_password || '';
@@ -92,7 +271,53 @@ router.put('/:userId/password', validateParams, authUser, async function(req, re
     });
 });
 
-// Validate email and send OTP code API
+/**
+ * @swagger
+ * /accounts/password/otp:
+ *   post:
+ *     summary: Validate email to send reset password OTP
+ *     tags: [User Account]
+ *     requestBody:
+ *       description: Email info
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: The user mail.
+ *           example:
+ *             email: "ddk992001@gmail.com"
+ *     responses:
+ *       "200":
+ *         description: Validate successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The validation status.
+ *                 user_id:
+ *                   type: integer
+ *                   description: The id of validated user.
+ *                 message:
+ *                   type: string
+ *                   description: The message validation.
+ *             example:
+ *               isSuccess: true
+ *               user_id: 1
+ *               message: OTP Code was sent. Please check your email and verify!
+ *       "400":
+ *         description: Validate failed.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: Email does not exist in the system!
+ */
 router.post('/password/otp', async function(req, res) {
     const email = req.body.email || '';
     const user = await userModel.findByEmail(email.toString());
@@ -129,7 +354,67 @@ router.post('/password/otp', async function(req, res) {
     });
 });
 
-// Validate OTP code API
+/**
+ * @swagger
+ * /accounts/password/validation/otp:
+ *   post:
+ *     summary: Verify reset password OTP
+ *     tags: [User Account]
+ *     requestBody:
+ *       description: OTP info
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               otp:
+ *                 type: string
+ *                 description: The OTP is sent to email.
+ *               user_id:
+ *                 type: integer
+ *                 description: The id of user needs to reset password.
+ *           example:
+ *             otp: "106352"
+ *             user_id: 1
+ *     responses:
+ *       "200":
+ *         description: Verify successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The verification status
+ *                 user_id:
+ *                   type: integer
+ *                   description: The id of verified user
+ *                 message:
+ *                   type: string
+ *                   description: The message verification
+ *                 reset_password_token:
+ *                   type: string
+ *                   description: The token needs to reset password
+ *             example:
+ *               isSuccess: true
+ *               user_id: 1
+ *               message: Validation successfully!
+ *               reset_password_token: $2b$10$7.XeJcEbRScKCEcytrkIVuc.VwCgKsVpObi5jTK52hNVSDPXvD5r.
+ *       "400":
+ *         description: Verify failed.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Wrong OTP:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Validation failed. OTP code may be incorrect or the session was expired!
+ *               Do not have records:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Validation failed. Do not have any otp records for this user!
+ */
 router.post('/password/validation/otp', async function(req, res) {
     const otp = req.body.otp || '';
     const userId = req.body.user_id || 0;
@@ -139,7 +424,7 @@ router.post('/password/validation/otp', async function(req, res) {
         if (otp === lastForgetPassword.otp_code && moment().isBefore(lastForgetPassword.reset_at))
             return res.json({
                 isSuccess: true,
-                message: 'Validation successfully',
+                message: 'Validation successfully!',
                 reset_password_token: await bcrypt.hash(otp + lastForgetPassword.reset_at, salt),
                 user_id: userId
             });
@@ -156,7 +441,63 @@ router.post('/password/validation/otp', async function(req, res) {
     });
 });
 
-// Reset password API
+/**
+ * @swagger
+ * /accounts/password:
+ *   post:
+ *     summary: Reset password OTP
+ *     tags: [User Account]
+ *     requestBody:
+ *       description: Password info
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               password:
+ *                 type: string
+ *                 description: The new password.
+ *               reset_password_token:
+ *                 type: string
+ *                 description: A string is used to determine if user verifies OTP code.
+ *               user_id:
+ *                 type: integer
+ *                 description: The id of user needs to reset password
+ *           example:
+ *             password: "123456"
+ *             reset_password_token: $2b$10$7.XeJcEbRScKCEcytrkIVuc.VwCgKsVpObi5jTK52hNVSDPXvD5r.
+ *             user_id: 1
+ *     responses:
+ *       "200":
+ *         description: Reset successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The reset status
+ *                 message:
+ *                   type: string
+ *                   description: The message reset
+ *             example:
+ *               isSuccess: true
+ *               message: Reset successfully. Please back to login screen and sign up!
+ *       "400":
+ *         description: Reset failed.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Wrong token:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Reset failed. This user do not have permission to reset password!
+ *               Do not have records:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Reset failed. Do not have any otp records for this user!
+ */
 router.post('/password', async function(req, res) {
     const password = req.body.password || '';
     const token = req.body.reset_password_token || '';

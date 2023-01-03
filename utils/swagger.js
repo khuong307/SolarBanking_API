@@ -2,10 +2,10 @@ export const swaggerConfigOptions = {
     definition: {
         openapi: '3.0.0',
         info: {
-            title: 'Sakila Express API with Swagger',
+            title: 'Solar Banking API Documentation',
             version: '1.0.0',
             description:
-                'This is a simple CRUD API application made with Express and documented with Swagger'
+                'This is a Internet banking API made with Express and documented with Swagger'
         },
         servers: [
             {
