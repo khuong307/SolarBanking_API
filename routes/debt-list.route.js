@@ -16,6 +16,7 @@ import userModel from "../models/user.model.js";
 import debt_status from "../utils/debt_status.js";
 import role from "../utils/role.js";
 import io from '../app.js';
+import transactionModel from "../models/transaction.model.js";
 
 dotenv.config();
 
@@ -111,7 +112,7 @@ router.get("/:debtId",authRole(role.CUSTOMER),async function(req,res,next){
 })
 
 //Create new debt API (internal): /api/debtList/
-router.post("/",validate(debtCreateSchema),authRole(role.CUSTOMER),async function(req,res){
+router.post("/",validate(debtCreateSchema),async function(req,res){
     try{
         const user_id = +req.body.user_id || 0;
         const debt_account_number = req.body.debt_account_number || '';
@@ -206,16 +207,16 @@ router.post("/sendOtp",async function(req,res,next){
                 otp_code: otp,
                 transaction_message : '',
                 pay_transaction_fee: 'DES',
-                is_success: 0,
-                transaction_type: 1
+                is_success: false,
+                transaction_type: 1,
+                transaction_created_at: moment().add(process.env.otp_time, 's').toDate()
             };
-            const ret = transactionsModel.genericMethods.add(newTransaction);
+            const ret = await transactionsModel.genericMethods.add(newTransaction);
             const transactionId = ret[0];
             //update transaction_id in debt table
-            const retUpdate = debtListModel.updateTransIdDebtPayment(debtId,transactionId);
+            await debtListModel.updateTransIdDebtPayment(debtId,transactionId);
 
             //Send otp mail for debtor
-            console.log(emailDebtor)
             const VERIFY_EMAIL_SUBJECT = 'Solar Banking: Please verify your payment';
             const OTP_MESSAGE = `
             Dear ${nameDebtor},\n
@@ -241,13 +242,56 @@ router.post("/sendOtp",async function(req,res,next){
         })
     }
 })
+//API resend OTP for payment
+router.post("/re-sendOtp",authRole(role.CUSTOMER),async function(req,res){
+    try{
+        const userId = +req.body.user_id || 0;
+        const debtId = +req.body.debt_id || 0;
+        const otp = createOTP();
+        const debtInfo = await debtListModel.genericMethods.findById(debtId);
+        if(debtInfo !== null){
+            const bankingInfoUser = await bankingAccountModel.findByUserId(userId);
+            const userAccountNumber = bankingInfoUser.account_number;
+            const debtorInfo = await bankingAccountModel.getInfoRecipientBy(userAccountNumber);
 
+            const emailDebtor = debtorInfo[0].email || "";
+            const nameDebtor = debtorInfo[0].full_name || "";
+            const trans_id = debtInfo.paid_transaction_id;
+            //update otp when user resend
+            await transactionsModel.updateOTPForPayDebt(trans_id,otp)
+
+            //Send otp mail for debtor
+            const VERIFY_EMAIL_SUBJECT = 'Solar Banking: Please verify your payment';
+            const OTP_MESSAGE = `
+            Dear ${nameDebtor},\n
+            Here is the OTP code you need to verified payment: ${otp}.\n
+            This code will be expired 5 minutes after this email was sent. If you did not make this request, you can ignore this email.
+            `;
+            sendEmail(emailDebtor, VERIFY_EMAIL_SUBJECT, OTP_MESSAGE);
+
+            return res.status(200).json({
+                isSuccess: true,
+                message: "OTP code has been sent. Please check your email",
+            })
+        }
+        res.status(500).json({
+            isSuccess: false,
+            message: "Could not find this debt",
+        })
+    }
+    catch (err){
+        res.status(400).json({
+            isSuccess: false,
+            message: err.message
+        })
+    }
+})
 //debt payment API (internal): /api/debtList/internal/verified-payment
-router.post("/internal/verified-payment",authRole(role.CUSTOMER),async function(req,res,next){
+router.post("/internal/verified-payment",async function(req,res,next){
     try{
         const _debtId = +req.body.debt_id || 0;
         const _userId = +req.body.user_id || 0;
-        const _otp = +req.body.otp || '';
+        const _otp = req.body.otp || '';
         const debtDetail = await debtListModel.genericMethods.findById(_debtId);
         if (debtDetail !== null){
             const senderId = _userId;
@@ -256,11 +300,13 @@ router.post("/internal/verified-payment",authRole(role.CUSTOMER),async function(
             const transId = debtDetail.paid_transaction_id;
             const transDetail = await transactionsModel.genericMethods.findById(transId);
             //Step 1: Verified OTP code
+            console.log(transDetail.otp_code)
+            console.log(moment().isBefore(transDetail.transaction_created_at))
             if (_otp === transDetail.otp_code && moment().isBefore(transDetail.transaction_created_at)){
                 //Step 2: Update status for debt detail
                 await debtListModel.updateStatusDebtPayment(_debtId,debt_status.PAID);
                 //Step 3: Update status of transaction
-                await transactionsModel.updateStatusTransaction(transId,1);
+                await transactionsModel.updateStatusTransaction(transId,true);
                 //Step 4.1: Update account balance of debtor
                 await bankingAccountModel.updateAccountBalance(senderId,debt_amount,1);
                 //Step 4.2: Update account balance of debt reminder
@@ -270,7 +316,7 @@ router.post("/internal/verified-payment",authRole(role.CUSTOMER),async function(
                     user_id: recipientId,
                     transaction_id: transId,
                     debt_id: _debtId,
-                    notification_message: `Debit code ${_debtId} has just been paid. Please check your account`,
+                    notification_message: `Debit code ${_debtId} has just been paid.`,
                     is_seen: 0,
                     notification_title: 'Debt Payment',
                     notification_created_at: new Date()
@@ -281,7 +327,7 @@ router.post("/internal/verified-payment",authRole(role.CUSTOMER),async function(
                     notification_id: ret[0],
                     ...newNotify
                 });
-                res.status(200).json({
+                return res.status(200).json({
                     isSuccess: true,
                     message: "Payment Successful",
                     status: debt_status.PAID,

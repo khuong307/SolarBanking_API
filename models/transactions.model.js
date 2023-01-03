@@ -13,10 +13,21 @@ export default {
                 transaction_id: transactionId
             })
             .update({
-                is_success: 1,
+                is_success: is_success,
                 transaction_created_at: moment().toDate()
             });
         return res
+    },
+    async updateOTPForPayDebt(transId,otp){
+        const res = await db('transaction')
+            .where({
+                transaction_id: transId
+            })
+            .update({
+                otp_code: otp,
+                transaction_created_at: moment().add(process.env.otp_time, 's').toDate()
+            });
+        return res;
     },
     async getTransactionList(isExternal){
         return db('transaction')
