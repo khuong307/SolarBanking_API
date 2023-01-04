@@ -32,7 +32,7 @@ router.get("/:userId/selfMade",authRole(role.CUSTOMER),async function(req,res){
         const _user = await userModel.genericMethods.findById(_userId);
 
         if (_user != null){
-            const listDebt = debtListModel.listSelfMade(_userId);
+            const listDebt = await debtListModel.listSelfMade(_userId);
             res.status(200).json({
                 isSuccess: true,
                 message: "This is all debts of you",
@@ -134,12 +134,12 @@ router.post("/",validate(debtCreateSchema),authRole(role.CUSTOMER),async functio
 
             //send notify for debt reminder
             let newNotify = {
-                user_id: user_id,
+                user_id: recipientIndo[0].user_id,
                 transaction_id: null,
                 debt_id: ret[0],
                 notification_message: 'You have a new debt',
                 is_seen: 0,
-                notification_title: 'Debt Notice',
+                notification_title: 'Debt Reminder',
                 notification_created_at: new Date()
             };
             //add new notification
