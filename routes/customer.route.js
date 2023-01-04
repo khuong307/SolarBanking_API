@@ -82,6 +82,7 @@
 
 import express from "express"
 import md5 from "md5"
+import moment from "moment"
 import bankingAccountModel from "../models/banking-account.model.js"
 import recipientModel from "../models/recipient.model.js"
 import validate, { validateParams } from '../middlewares/validate.mdw.js';
@@ -1044,7 +1045,7 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
 /**
  * @swagger
  * /customers/desaccount:
- *   get:
+ *   post:
  *     summary: Receive account_number from other bank and query to send back to that bank
  *     tags: [Customer Transaction]
  *     requestBody:
@@ -1119,7 +1120,7 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
  */
 
 // Receive account_number from other bank and query to send back to that bank
-router.get("/desaccount", async (req, res) => {
+router.post("/desaccount", async (req, res) => {
     const { token, bank_code } = req.body
     try {
         // Get public key based on bank_code from infoVerification
@@ -1345,7 +1346,7 @@ router.post("/intertransaction/:id", async (req, res) => {
 /**
  * @swagger
  * /customers/intertransaction:
- *   get:
+ *   post:
  *     summary: Receive money from other bank ( intertransaction)
  *     tags: [Customer Transaction]
  *     requestBody:
@@ -1425,7 +1426,7 @@ router.post("/intertransaction/:id", async (req, res) => {
  *               message: Can not done the transaction
  */
 
-router.get("/intertransaction", async (req, res) => {
+router.post("/intertransaction", async (req, res) => {
     const { token, bank_code } = req.body
     console.log(req.body)
     console.log(token)
@@ -1478,7 +1479,7 @@ router.get("/intertransaction", async (req, res) => {
     // Using trx as a transaction object:
     const trx = await db.transaction();
     try {
-        const desInfo = await bankingAccountModel.getInfoUserBy(infoReceive?.des_account_number)
+        let desInfo = await bankingAccountModel.getInfoUserBy(infoReceive?.des_account_number)
         if (desInfo === null) {
             return res.status(400).json({
                 isSuccess: false,
@@ -1558,6 +1559,7 @@ router.get("/intertransaction", async (req, res) => {
 
         delete desInfo.balance
         // Encrypt data to send back to other bank
+        desInfo = {...desInfo,des_account_number:infoReceive?.des_account_number}
         const encryptToken = await jwt.generateAsyncToken(desInfo, process.env.PRIVATE_KEY, EXPIRED_RSA_TIME)
         const encryptedData = { encryptToken, bank_code: "SLB" }
 
