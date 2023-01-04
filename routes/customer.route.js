@@ -148,10 +148,10 @@ router.get("/:userId/bankaccounts", validateParams, async (req, res) => {
     const userId = +req.params.userId
     try {
         const bankAccounts = await bankingAccountModel.findByUserIdAndAccountType(userId, 1)
-        if(bankAccounts.length <=0){
+        if (bankAccounts.length <= 0) {
             return res.status(400).json({
-                isSuccess:false,
-                message:"There is no bank account for this user"
+                isSuccess: false,
+                message: "There is no bank account for this user"
             })
         }
         return res.status(200).json({
@@ -248,7 +248,7 @@ router.get("/:userId/bankaccount", validateParams, async (req, res) => {
  * @swagger
  * /customers/{userId}/intratransaction:
  *   post:
- *     summary: FIrst step - Check Info Inter Transaction Before Real Transfer
+ *     summary: FIrst step - Check Info Intra Transaction Before Real Transfer
  *     tags: [Customer Transaction]
  *     parameters:
  *     - name: userId
@@ -313,7 +313,7 @@ router.get("/:userId/bankaccount", validateParams, async (req, res) => {
  *                    src_account_number: "11111",
  *                    des_account_number: "01325183",
  *                    bank_code: "SLB",
- *                    transaction_amount: "SLB",
+ *                    transaction_amount: 500000,
  *                    transaction_message: "Transfer Money",
  *                    pay_transaction_fee: "SRC",
  *                    full_name: "Lam Thanh Hong",
@@ -400,7 +400,86 @@ router.post("/:userId/intratransaction", validateParams, async (req, res) => {
     }
 })
 
-// Second step: Confirm transaction after all info is correct ---------- DUNG CHO CA LIEN NGAN HANG VA NOI BO
+/**
+ * @swagger
+ * /customers/{userId}/transaction/confirm:
+ *   post:
+ *     summary: Second step - Confirm information transaction ( used for both intrabank and interbank)
+ *     tags: [Customer Transaction]
+ *     parameters:
+ *     - name: userId
+ *       in: path
+ *       description: User id to find user information belong to this user
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     requestBody:
+ *       description: Info Transaction
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               src_account_number:
+ *                 type: string
+ *                 description: The bank account of sender.
+ *               des_account_number:
+ *                 type: string
+ *                 description: The bank account of recipient.
+ *               transaction_amount:
+ *                 type: int
+ *                 description: The amount of money transfer
+ *               transaction_message:
+ *                 type: string
+ *                 description: The message of transaction
+ *               pay_transaction_fee:
+ *                 type: string
+ *                 description: Type of transaction fee
+ *               transaction_type:
+ *                 type: int
+ *                 description: Type of transaction
+ *           example:
+ *             src_account_number: "11111"
+ *             des_account_number: "01325183"
+ *             transaction_amount: 500000
+ *             transaction_message: "Transfer Money"
+ *             pay_transaction_fee: "SRC"
+ *             transaction_type: 1
+ *     responses:
+ *       "200":
+ *         description: Confirm information transaction is valid.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The status of confirm transaction.
+ *                 transactionId:
+ *                   type: int
+ *                   description: The id of transaction
+ *             example:
+ *               isSuccess: true
+ *               transactionId: 1
+ *       "400":
+ *         description: Valid Intra Transaction failed.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: "Money transaction is invalid"
+ *       "500":
+ *         description: Invalid Information Intra Transaction.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: "Can not confirm the transaction"
+ */
+
+// ---------- DUNG CHO CA LIEN NGAN HANG VA NOI BO --------------------- //
+// Second step: Confirm transaction after all info is correct 
 router.post("/:userId/transaction/confirm", validateParams, async (req, res) => {
     const userId = +req.params.userId
     const infoTransaction = req.body
@@ -409,7 +488,7 @@ router.post("/:userId/transaction/confirm", validateParams, async (req, res) => 
         const srcBankAccount = await bankingAccountModel.genericMethods.findById(infoTransaction.src_account_number)
         // Check amount of money is valid corresponding to account_number
         if (infoTransaction.transaction_amount > srcBankAccount.balance) {
-            return res.status(403).json({
+            return res.status(400).json({
                 isSuccess: false,
                 message: "Money transaction is invalid"
             })
@@ -442,6 +521,87 @@ router.post("/:userId/transaction/confirm", validateParams, async (req, res) => 
         })
     }
 })
+
+/**
+ * @swagger
+ * /customers/intratransaction/{id}:
+ *   post:
+ *     summary: Final step - Intra transaction Valid OTP and Transaction completed 
+ *     tags: [Customer Transaction]
+ *     parameters:
+ *     - name: id
+ *       in: path
+ *       description: id belongs to a transaction
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     requestBody:
+ *       description: Information OTP
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               otpCode:
+ *                 type: string
+ *                 description: 6 digits verification for a transaction.
+ *               created_at:
+ *                 type: string
+ *                 description: timestamp send otp to server
+ *           example:
+ *             otpCode: "324789"
+ *             created_at: "2023-01-04 09:43:00"
+ *     responses:
+ *       "200":
+ *         description: Confirm OTP is valid.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The status of confirm transaction.
+ *                 infoTransaction:
+ *                   type: object
+ *                   description: The information of a transaction
+ *             example:
+ *               isSuccess: true
+ *               infoTransaction: {
+ *                 isSavedRecipientTable: true,
+ *                 full_name: "Lam Thanh Hong",
+ *                 des_account_number: "01325183",
+ *                 bank: "SOLAR BANKING",
+ *                 transaction_amount: 500000,
+ *                 transaction_message: "Transfer Money",
+ *                 transaction_fee: 15000,
+ *                 total: 515000
+ *               }
+ *       "403":
+ *         description: Transaction failed.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Invalid transaction:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Transaction has already completed
+ *               Expired OTP Code:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Transaction failed! OTP Code is expired
+ *               Wrong amount of money transaction:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Transaction failed! Balance is not enough for transfer
+ *       "500":
+ *         description: Invalid Information Intra Transaction.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: "Can not confirm the transaction"
+ */
 
 // Final Step: Valid OTP and Transaction completed
 router.post("/intratransaction/:id", async (req, res) => {
@@ -566,6 +726,58 @@ router.post("/intratransaction/:id", async (req, res) => {
     }
 })
 
+/**
+ * @swagger
+ * /customers/transaction/{id}/otp:
+ *   post:
+ *     summary: Resend OTP of a transaction ( used for both intrabank and interbank) 
+ *     tags: [Customer Transaction]
+ *     parameters:
+ *     - name: id
+ *       in: path
+ *       description: id belongs to a transaction
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     responses:
+ *       "200":
+ *         description: Successfully Resend OTP.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The status of confirm transaction.
+ *                 message:
+ *                   type: string
+ *                   description: The information of OTP Resend
+ *             example:
+ *               isSuccess: true
+ *               message: OTP has been renew
+ *       "403":
+ *         description: Resend OTP failed.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Invalid transaction:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Transaction has already completed
+ *               Invalid Email Sender:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: OTP can not be renew because can't find src_information
+ *       "500":
+ *         description: Resend OTP failed.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: "OTP Can not be resend"
+ */
+
 // Resend OTP
 router.post("/transaction/:id/otp", async (req, res) => {
     const transactionId = req.params.id
@@ -584,7 +796,7 @@ router.post("/transaction/:id/otp", async (req, res) => {
         if (result === null) {
             return res.status(403).json({
                 isSuccess: false,
-                message: "OTP can not be renew"
+                message: "OTP can not be renew because can't find src_information"
             })
         }
 
@@ -615,6 +827,113 @@ router.post("/transaction/:id/otp", async (req, res) => {
 
 // -------------------------------------- INTERBANK : LIEN NGAN HANG ---------------------------- //
 
+/**
+ * @swagger
+ * /customers/{userId}/intertransaction:
+ *   post:
+ *     summary: FIrst step - Check Info Inter Transaction + Get des_account_number information
+ *     tags: [Customer Transaction]
+ *     parameters:
+ *     - name: userId
+ *       in: path
+ *       description: User id to find bank account belong to a user
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     requestBody:
+ *       description: Info Transaction
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               src_account_number:
+ *                 type: string
+ *                 description: The bank account of sender.
+ *               des_account_number:
+ *                 type: string
+ *                 description: The bank account of recipient.
+ *               bank_code:
+ *                 type: string
+ *                 description: The code of bank's recipient
+ *               transaction_amount:
+ *                 type: int
+ *                 description: The amount of money transfer
+ *               transaction_message:
+ *                 type: string
+ *                 description: The message of transaction
+ *               pay_transaction_fee:
+ *                 type: string
+ *                 description: Type of transaction
+ *           example:
+ *             src_account_number: "11111"
+ *             des_account_number: "23875338674"
+ *             bank_code: "TXB"
+ *             transaction_amount: 500000
+ *             transaction_message: "Transfer Money"
+ *             pay_transaction_fee: "SRC"
+ *     responses:
+ *       "200":
+ *         description: Confirm information transaction is valid.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The status
+ *                 message:
+ *                   type: string
+ *                   description: Confirm transaction is valid                 
+ *                 infoTransaction:
+ *                   type: object
+ *                   description: information of transaction includes recipient information
+ *             example:
+ *                 isSuccess: true
+ *                 message: "Confirm transaction is valid"
+ *                 infoTransaction: {
+ *                    src_account_number: "11111",
+ *                    des_account_number: "23875338674",
+ *                    bank_code: "TXB",
+ *                    transaction_amount: 500000,
+ *                    transaction_message: "Transfer Money",
+ *                    pay_transaction_fee: "SRC",
+ *                    full_name: "Customer Name",
+ *                    email: "",
+ *                    phone: "",
+ *                    transaction_type: 2
+ *                 }
+ *       "400":
+ *         description: Valid Inter Transaction failed.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Invalid Bank:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Bank doesn't belongs to system connectivity banks
+ *               Money transaction invalid:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Money transaction is invalid
+ *               Not existed src_account_number:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: source account number is invalid
+ *               Not existed des_account_number:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: destination account number is invalid
+ *       "500":
+ *         description: Invalid Information Inter Transaction.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: Can not confirm the transaction
+ */
+
 // First step: Get des_full_info from other banks based on des_account_number
 router.post("/:userId/intertransaction", validateParams, async (req, res) => {
     const infoTransaction = req.body
@@ -625,7 +944,7 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
         // Check src_account_number is existed (belong to userId)
         const result_src = await bankingAccountModel.findByUserIdAndAccountNumber(userId, infoTransaction.src_account_number)
         if (result_src.length === 0) {
-            return res.status(403).json({
+            return res.status(400).json({
                 isSuccess: false,
                 message: "source account number is invalid"
             })
@@ -633,7 +952,7 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
 
         // Check amount of money is valid corresponding to account_number
         if (infoTransaction.transaction_amount > result_src[0].balance) {
-            return res.status(403).json({
+            return res.status(400).json({
                 isSuccess: false,
                 message: "Money transaction is invalid"
             })
@@ -651,19 +970,19 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
 
         // Prepare data to send to other bank to get info des_account_number
         const payload = {
-            accountNumber:infoTransaction.des_account_number,
-            slug:BANK_CODE
+            accountNumber: infoTransaction.des_account_number,
+            slug: BANK_CODE
         }
         let data = JSON.stringify(payload)
         const timestamp = Date.now()
         // Encrypt des_account_number by private key
-        const msgToken = md5(timestamp+data+process.env.SECRET_KEY)
-        const infoVerification = { 
-            accountNumber:infoTransaction.des_account_number,
-            timestamp:timestamp,
-            msgToken:msgToken,
-            slug:BANK_CODE
-         }
+        const msgToken = md5(timestamp + data + process.env.SECRET_KEY)
+        const infoVerification = {
+            accountNumber: infoTransaction.des_account_number,
+            timestamp: timestamp,
+            msgToken: msgToken,
+            slug: BANK_CODE
+        }
 
         // Sending des_account_number to other bank to query info
         const result = await axios({
@@ -705,8 +1024,8 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
             infoTransaction: {
                 ...infoTransaction,
                 full_name: result_des.name,
-                email:"",
-                phone:"",
+                email: "",
+                phone: "",
                 transaction_type: 2
             }
         })
@@ -722,68 +1041,151 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
     }
 })
 
-// First step: Receive account_number from other bank and query to send back to that bank
+/**
+ * @swagger
+ * /customers/desaccount:
+ *   get:
+ *     summary: Receive account_number from other bank and query to send back to that bank
+ *     tags: [Customer Transaction]
+ *     requestBody:
+ *       description: Info Transaction
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: information des_account_numer encrypted.
+ *               bank_code:
+ *                 type: string
+ *                 description: The bank of sender ( other bank).
+ *           example:
+ *             token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjp7ImRlc19hY2NvdW50X251bWJlciI6IjExMTExIiwiZGVzX2JhbmtfY29kZSI6IlNMQiJ9LCJpYXQiOjE2NzI4MDM0ODIsImV4cCI6MTY3MjkwMzQ4Mn0.KXtrhcOK6G_-l_YpwFGy_hysw-G4SdTCvmzKrLyQ5ld7_qDOPeV0hnzP6-fgbwMDU21JON0ySwIO-2G5kAKKIME_GBuD9S-eQ7OY5yZY8tfQB_-ExQhuRR_0bkS4clIc-FTVkrkIsSlauYH72_6ULhhH0DHO9R5C0nrOtKEDVxc"
+ *             bank_code: "TXB"
+ *     responses:
+ *       "200":
+ *         description: Successfully get bank account information.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The status of get information bank account                
+ *                 infoRecipient:
+ *                   type: object
+ *                   description: information of recipient ( our bank)
+ *             example:
+ *                 isSuccess: true
+ *                 infoRecipient: {
+ *                    user_id: "40",
+ *                    full_name: "Lam Thanh Hong",
+ *                    email: "hong8877@gmail.com",
+ *                    phone: "1902445452",
+ *                 }
+ *       "400":
+ *         description: Invalid Request Get Information Destination Account.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Invalid Bank:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Bank doesn't belongs to system connectivity banks
+ *               Decode Token Failed:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Can not decode token
+ *               Not existed des_account_number:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Can not find user by account number
+ *       "401":
+ *         description: Invalid Token.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: Can not verified token
+ *       "500":
+ *         description: Invalid Getting Destination User Information.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: Can not get the information of user
+ */
+
+// Receive account_number from other bank and query to send back to that bank
 router.get("/desaccount", async (req, res) => {
     const { token, bank_code } = req.body
-    // Get public key based on bank_code from infoVerification
-    const bankInfo = await bankModel.genericMethods.findById(bank_code)
+    try {
+        // Get public key based on bank_code from infoVerification
+        const bankInfo = await bankModel.genericMethods.findById(bank_code)
 
-    // Check other bank is exist in database
-    if (bankInfo === null) {
-        return res.status(400).json({
+        // Check other bank is exist in database
+        if (bankInfo === null) {
+            return res.status(400).json({
+                isSuccess: false,
+                message: "Bank doesn't belongs to system connectivity banks"
+            })
+        }
+
+        console.log(bankInfo)
+        // Verify exactly other bank is send this message
+        if (await jwt.verifyAsyncToken(token, bankInfo.public_key, EXPIRED_RSA_TIME) === null) {
+            return res.status(401).json({
+                isSuccess: false,
+                message: "Can not verified token"
+            })
+        }
+        // Decode token to get des_account_number
+        const decodedInfo = await jwt.decodeAsyncToken(token)
+        if (decodedInfo === null) {
+            return res.status(400).json({
+                isSuccess: false,
+                message: "Can not decode token"
+            })
+        }
+
+        console.log(decodedInfo)
+
+        // Get info des_account_number
+        const account_number = decodedInfo.payload.payload.des_account_number
+        const des_bank_code = decodedInfo.payload.payload.des_bank_code
+
+        // Check des_account_number existed based on account number and bank code
+        if (!await bankingAccountModel.checkExistBy(account_number, des_bank_code)) {
+            return res.status(400).json({
+                isSuccess: false,
+                message: "Can not find user by account number"
+            })
+        }
+
+        const infoRecipient = await bankingAccountModel.getInfoUserBy(account_number)
+        if (infoRecipient === null) {
+            return res.status(400).json({
+                isSuccess: false,
+                message: "Can not find user by account number"
+            })
+        }
+        // delete balance des_account_number before sending to other bank
+        delete infoRecipient.balance
+
+        return res.status(200).json({
+            isSuccess: true,
+            infoRecipient
+        })
+    } catch (err) {
+        console.log(err)
+        return res.status(500).json({
             isSuccess: false,
-            message: "Bank doesn't belongs to system connectivity banks"
+            message: "Can not get the information of user"
         })
     }
-
-    console.log(bankInfo)
-    // Verify exactly other bank is send this message
-    if (await jwt.verifyAsyncToken(token, bankInfo.public_key, EXPIRED_RSA_TIME) === null) {
-        return res.status(403).json({
-            isSuccess: false,
-            message: "Can not verified token"
-        })
-    }
-    // Decode token to get des_account_number
-    const decodedInfo = await jwt.decodeAsyncToken(token)
-    if (decodedInfo === null) {
-        return res.status(400).json({
-            isSuccess: false,
-            message: "Can not decode token"
-        })
-    }
-
-    console.log(decodedInfo)
-
-    // Get info des_account_number
-    const account_number = decodedInfo.payload.payload.des_account_number
-    const des_bank_code = decodedInfo.payload.payload.des_bank_code
-
-    // Check des_account_number existed based on account number and bank code
-    if (!await bankingAccountModel.checkExistBy(account_number, des_bank_code)) {
-        return res.status(400).json({
-            isSuccess: false,
-            message: "Can not find user by account number"
-        })
-    }
-
-    const infoRecipient = await bankingAccountModel.getInfoUserBy(account_number)
-    if (infoRecipient === null) {
-        return res.status(400).json({
-            isSuccess: false,
-            message: "Can not find user by account number"
-        })
-    }
-    // delete balance des_account_number before sending to other bank
-    delete infoRecipient.balance
-
-    return res.status(200).json({
-        isSuccess: true,
-        infoRecipient
-    })
 })
-
-// Second step: use as the same for Intrabank
 
 // Final Step: Valid OTP and Transaction completed
 router.post("/intertransaction/:id", async (req, res) => {
@@ -896,10 +1298,10 @@ router.post("/intertransaction/:id", async (req, res) => {
 
         let isSavedRecipientTable = false
         // Check des_account_number is saved to table recipient
-        const resultRecipient = await recipientModel.checkExistByUserIdAndAccountNumber(srcBankAccount.user_id,dataTransaction.des_account_number)
-        if(resultRecipient === null){
+        const resultRecipient = await recipientModel.checkExistByUserIdAndAccountNumber(srcBankAccount.user_id, dataTransaction.des_account_number)
+        if (resultRecipient === null) {
             isSavedRecipientTable = false
-        }else{
+        } else {
             isSavedRecipientTable = true
         }
         // Create info Transaction to send to client
@@ -939,6 +1341,90 @@ router.post("/intertransaction/:id", async (req, res) => {
 
 
 // -------------- IN CASE RECEIVE MONEY FROM OTHER BANKS FINAL STEP ------------------------------//
+
+/**
+ * @swagger
+ * /customers/intertransaction:
+ *   get:
+ *     summary: Receive money from other bank ( intertransaction)
+ *     tags: [Customer Transaction]
+ *     requestBody:
+ *       description: Information Transaction
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: information transaction encrypted.
+ *               bank_code:
+ *                 type: string
+ *                 description: The bank of sender ( other bank).
+ *           example:
+ *             token: "string"
+ *             bank_code: "TXB"
+ *     responses:
+ *       "200":
+ *         description: Successfully transaction.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The status of get information bank account
+ *                 message:
+ *                   type: string
+ *                   description: Confirm Transaction is completed                
+ *                 encryptedData:
+ *                   type: object
+ *                   description: information of des_account_number ( our bank) encrypted
+ *             example:
+ *                 isSuccess: true
+ *                 message: Transaction completed
+ *                 encryptedData: {
+ *                    encryptToken: "string",
+ *                    bank_code: "SLB"
+ *                 }
+ *       "400":
+ *         description: Invalid Request Transaction.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Invalid Bank:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Bank doesn't belongs to system connectivity banks
+ *               Decode Token Failed:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Can not decode token
+ *               Not existed des_account_number:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Account doesn't exist
+ *               Invalid balance of des_account_number:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Transaction failed! Balance is not enough for transfer
+ *       "401":
+ *         description: Invalid Token.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: Can not verified token
+ *       "500":
+ *         description: Invalid Transaction.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: Can not done the transaction
+ */
+
 router.get("/intertransaction", async (req, res) => {
     const { token, bank_code } = req.body
     console.log(req.body)
@@ -956,7 +1442,7 @@ router.get("/intertransaction", async (req, res) => {
 
     // Verify exactly other bank is send this message
     if (await jwt.verifyAsyncToken(token, bankInfo.public_key, EXPIRED_RSA_TIME) === null) {
-        return res.status(403).json({
+        return res.status(401).json({
             isSuccess: false,
             message: "Can not verified token"
         })
@@ -971,10 +1457,10 @@ router.get("/intertransaction", async (req, res) => {
         })
     }
 
-    console.log("decodeInfo: ",decodedInfo)
+    console.log("decodeInfo: ", decodedInfo)
 
     const infoReceive = decodedInfo.payload.infoTransaction
-    console.log("infoReceive: ",infoReceive)
+    console.log("infoReceive: ", infoReceive)
     const newUser = {
         full_name: infoReceive?.full_name,
         email: infoReceive?.email,
@@ -1094,6 +1580,62 @@ router.get("/intertransaction", async (req, res) => {
 })
 
 
+/**
+ * @swagger
+ * /customers/save:
+ *   post:
+ *     summary: Save recipient to recipient list of user
+ *     tags: [Customer Transaction]
+ *     requestBody:
+ *       description: Information Recipient
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               user_id:
+ *                 type: int
+ *                 description: unique identifier of user.
+ *               account_number:
+ *                 type: string
+ *                 description: The bank account of recipient.
+ *               nick_name:
+ *                 type: string
+ *                 description: Short name of recipient
+ *           example:
+ *             user_id: 1
+ *             account_number: 01325183
+ *             nick_name: Hong
+ *     responses:
+ *       "200":
+ *         description: Successfully save recipient.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The status of get information bank account
+ *                 message:
+ *                   type: string
+ *                   description: Save recipient is completed                
+ *                 result:
+ *                   type: int
+ *                   description: id of new recipient in recipient list
+ *             example:
+ *                 isSuccess: true
+ *                 message: Save recipient successfully!
+ *                 result: 1
+ *       "500":
+ *         description: Invalid Save Recipient.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: Can not save recipient
+ */
+
 // Save recipient to recipient list
 router.post("/save", async (req, res) => {
     const infoRecipient = req.body
@@ -1108,6 +1650,7 @@ router.post("/save", async (req, res) => {
         }
         return res.status(200).json({
             isSuccess: true,
+            message: "Save recipient successfully!",
             result
         })
     } catch (err) {
