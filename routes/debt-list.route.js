@@ -16,7 +16,6 @@ import userModel from "../models/user.model.js";
 import debt_status from "../utils/debt_status.js";
 import role from "../utils/role.js";
 import io from '../app.js';
-import transactionModel from "../models/transaction.model.js";
 
 dotenv.config();
 
