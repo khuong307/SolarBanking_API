@@ -60,8 +60,9 @@ router.get("/:userId/otherMade",authRole(role.CUSTOMER),async function(req,res){
     try{
         //get userid from body
         const _userId = +req.params.userId || 0;
-        const _userBanking = await bankingAccountModel.findByUserId(_userId);
-        if (_userBanking != null){
+        const SPENDING_ACCOUNT_TYPE = 1;
+        const _userBanking = await bankingAccountModel.findByUserIdAndAccountType(_userId, SPENDING_ACCOUNT_TYPE);
+        if (_userBanking.length !== 0){
             const userAccountNumber = _userBanking[0].account_number;
             const listDebt = await debtListModel.listOtherMade(userAccountNumber);
             res.status(200).json({
@@ -179,14 +180,15 @@ router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
         const userId = +req.body.user_id || 0;
         const debtId = +req.body.debt_id || 0;
         const otp = createOTP();
+        const SPENDING_ACCOUNT_TYPE = 1;
         const debtInfo = await debtListModel.genericMethods.findById(debtId);
         if(debtInfo != null){
             const debtorAccountNumber = debtInfo.debt_account_number;
             const senderId = debtInfo.user_id;
-            const bankingInfoUser = await bankingAccountModel.findByUserId(userId);
-            const userAccountNumber = bankingInfoUser.account_number;
+            const bankingInfoUser = await bankingAccountModel.findByUserIdAndAccountType(userId, SPENDING_ACCOUNT_TYPE);
+            const userAccountNumber = bankingInfoUser[0].account_number;
             const debtorInfo = await bankingAccountModel.getInfoRecipientBy(userAccountNumber);
-            const senderInfo = await bankingAccountModel.findByUserId(senderId)
+            const senderInfo = await bankingAccountModel.findByUserIdAndAccountType(senderId, SPENDING_ACCOUNT_TYPE);
 
             const emailDebtor = debtorInfo[0].email || "";
             const nameDebtor = debtorInfo[0].full_name || "";
@@ -201,7 +203,7 @@ router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
             }
             //Create transaction
             let newTransaction = {
-                src_account_number: senderInfo.account_number,
+                src_account_number: senderInfo[0].account_number,
                 des_account_number: debtorAccountNumber,
                 transaction_amount: debtInfo.debt_amount > 0 ? debtInfo.debt_amount : 0,
                 otp_code: otp,
@@ -248,10 +250,11 @@ router.post("/re-sendOtp",authRole(role.CUSTOMER),async function(req,res){
         const userId = +req.body.user_id || 0;
         const debtId = +req.body.debt_id || 0;
         const otp = createOTP();
+        const SPENDING_ACCOUNT_TYPE = 1;
         const debtInfo = await debtListModel.genericMethods.findById(debtId);
         if(debtInfo !== null){
-            const bankingInfoUser = await bankingAccountModel.findByUserId(userId);
-            const userAccountNumber = bankingInfoUser.account_number;
+            const bankingInfoUser = await bankingAccountModel.findByUserIdAndAccountType(userId, SPENDING_ACCOUNT_TYPE);
+            const userAccountNumber = bankingInfoUser[0].account_number;
             const debtorInfo = await bankingAccountModel.getInfoRecipientBy(userAccountNumber);
 
             const emailDebtor = debtorInfo[0].email || "";
