@@ -24,7 +24,7 @@ router.get("/",async(req,res)=>{
 router.get("/infoUser",async function(req,res){
     try{
         const account_number = req.body.account_number;
-        const userInfo = bankingAccountModel.getInfoRecipientBy(account_number);
+        const userInfo = await bankingAccountModel.getInfoRecipientBy(account_number);
         if (userInfo){
             let userResponse = {
                 full_name: userInfo[0].full_name,
