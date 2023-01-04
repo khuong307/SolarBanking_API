@@ -39,8 +39,8 @@ router.get('/:userId/savingAccounts', validateParams, authUser, authRole(role.CU
 // Get all spend accounts API
 router.get('/:userId/spendAccounts', validateParams, authUser, authRole(role.CUSTOMER), async function(req, res) {
     const userId = +req.params.userId;
-    const SAVING_ACCOUNT_TYPE = 1;
-    const accounts = await bankingAccountModel.findByUserIdAndAccountType(userId, SAVING_ACCOUNT_TYPE);
+    const SPENDING_ACCOUNT_TYPE = 1;
+    const accounts = await bankingAccountModel.findByUserIdAndAccountType(userId, SPENDING_ACCOUNT_TYPE);
 
     return res.json(accounts);
 });

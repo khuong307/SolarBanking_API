@@ -38,6 +38,6 @@ export default {
             user_id: userId,
             account_number: accountNumber
         }).select();
-        return ans.length > 0 ? ans[0] : null
+        return ans.length > 0 ? true : false
     }
 };

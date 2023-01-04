@@ -5,9 +5,8 @@ import { BANK_CODE } from '../utils/bank_constanst.js';
 export default {
     genericMethods: generate('banking_account', 'account_number'),
 
-    async findByUserId(userId) {
-        const res = await db('banking_account').where('user_id',userId).select();
-        return res.length > 0 ? res[0]: null
+    findByUserId(userId) {
+        return db('banking_account').where('user_id', userId).select();
     },
 
     findByUserIdAndAccountType(userId, accountType) {

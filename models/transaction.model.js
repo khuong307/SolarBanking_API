@@ -17,7 +17,6 @@ export default {
             this.on("user.user_id","=","banking_account.user_id")
             .orOn("user.user_id","=","banking_account.user_id")
         }).select("*")
-        console.log(ans)
         return ans.length > 0 ? ans : null
     }
 };
