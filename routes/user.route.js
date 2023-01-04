@@ -1,3 +1,32 @@
+/**
+ * @swagger
+ * tags:
+ *   name: User
+ *   description: API to handle features and information belonging to user.
+ * components:
+ *   schemas:
+ *     User:
+ *       type: object
+ *       properties:
+ *         user_id:
+ *           type: integer
+ *           description: The id of user.
+ *         full_name:
+ *           type: string
+ *           description: The full name of user.
+ *         email:
+ *           type: integer
+ *           description: The email of user.
+ *         phone:
+ *           type: string
+ *           description: The phone number of user.
+ *       example:
+ *          user_id: 1
+ *          full_name: "Dang Duy Khang"
+ *          email: ddk992001@gmail.com
+ *          phone: "0763937086"
+ */
+
 import express from 'express';
 import { readFile } from 'fs/promises';
 
@@ -19,7 +48,71 @@ const recipientSchema = JSON.parse(await readFile(new URL('../schemas/recipient.
 
 const router = express.Router();
 
-// Get all banking accounts API
+/**
+ * @swagger
+ * /users/{userId}/accounts:
+ *   get:
+ *     summary: Get all banking accounts
+ *     tags: [User]
+ *     parameters:
+ *     - name: userId
+ *       in: path
+ *       description: User id to get banking accounts
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
+ *     responses:
+ *       "200":
+ *         description: Successful operation.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/BankingAccount"
+ *             examples:
+ *               Get successfully:
+ *                 value:
+ *                   - account_number: "11111"
+ *                     balance: 50000000
+ *                     user_id: 1
+ *                     bank_code: "SLB"
+ *                     is_spend_account: 1
+ *                   - account_number: "23651"
+ *                     balance: 2000000
+ *                     user_id: 1
+ *                     bank_code: "SLB"
+ *                     is_spend_account: 0
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "400":
+ *         description: Get failed.
+ *         content:
+ *           application/json:
+ *             example:
+ *               error: 'The id parameter must be a positive integer'
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ *       "403":
+ *         description: Not allowed user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Not allowed user!
+ */
 router.get('/:userId/accounts', validateParams, authUser, authRole(role.CUSTOMER), async function(req, res) {
     const userId = +req.params.userId;
     const accounts = await bankingAccountModel.findByUserId(userId);
@@ -27,7 +120,71 @@ router.get('/:userId/accounts', validateParams, authUser, authRole(role.CUSTOMER
     return res.json(accounts);
 });
 
-// Get all saving accounts API
+/**
+ * @swagger
+ * /users/{userId}/savingAccounts:
+ *   get:
+ *     summary: Get all saving accounts
+ *     tags: [User]
+ *     parameters:
+ *     - name: userId
+ *       in: path
+ *       description: User id to get saving accounts
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
+ *     responses:
+ *       "200":
+ *         description: Successful operation.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/BankingAccount"
+ *             examples:
+ *               Get successfully:
+ *                 value:
+ *                   - account_number: "11111"
+ *                     balance: 50000000
+ *                     user_id: 1
+ *                     bank_code: "SLB"
+ *                     is_spend_account: 0
+ *                   - account_number: "23651"
+ *                     balance: 2000000
+ *                     user_id: 1
+ *                     bank_code: "SLB"
+ *                     is_spend_account: 0
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "400":
+ *         description: Get failed.
+ *         content:
+ *           application/json:
+ *             example:
+ *               error: 'The id parameter must be a positive integer'
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ *       "403":
+ *         description: Not allowed user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Not allowed user!
+ */
 router.get('/:userId/savingAccounts', validateParams, authUser, authRole(role.CUSTOMER), async function(req, res) {
     const userId = +req.params.userId;
     const SAVING_ACCOUNT_TYPE = 0;
@@ -36,7 +193,66 @@ router.get('/:userId/savingAccounts', validateParams, authUser, authRole(role.CU
     return res.json(accounts);
 });
 
-// Get all spend accounts API
+/**
+ * @swagger
+ * /users/{userId}/spendAccounts:
+ *   get:
+ *     summary: Get all spending accounts
+ *     tags: [User]
+ *     parameters:
+ *     - name: userId
+ *       in: path
+ *       description: User id to get spending accounts
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
+ *     responses:
+ *       "200":
+ *         description: Successful operation.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/BankingAccount"
+ *             examples:
+ *               Get successfully:
+ *                 value:
+ *                   - account_number: "11111"
+ *                     balance: 50000000
+ *                     user_id: 1
+ *                     bank_code: "SLB"
+ *                     is_spend_account: 1
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "400":
+ *         description: Get failed.
+ *         content:
+ *           application/json:
+ *             example:
+ *               error: 'The id parameter must be a positive integer'
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ *       "403":
+ *         description: Not allowed user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Not allowed user!
+ */
 router.get('/:userId/spendAccounts', validateParams, authUser, authRole(role.CUSTOMER), async function(req, res) {
     const userId = +req.params.userId;
     const SPENDING_ACCOUNT_TYPE = 1;
@@ -45,15 +261,148 @@ router.get('/:userId/spendAccounts', validateParams, authUser, authRole(role.CUS
     return res.json(accounts);
 });
 
-// Get info of user by id API
-router.get('/:userId', validateParams, authUser,  async function(req, res) {
+/**
+ * @swagger
+ * /users/{userId}:
+ *   get:
+ *     summary: Get user info
+ *     tags: [User]
+ *     parameters:
+ *     - name: userId
+ *       in: path
+ *       description: User id to get info
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
+ *     responses:
+ *       "200":
+ *         description: Successful operation.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/User"
+ *             examples:
+ *               Get successfully:
+ *                 value:
+ *                    user_id: 1
+ *                    full_name: "Dang Duy Khang"
+ *                    email: ddk992001@gmail.com
+ *                    phone: "0763937086"
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "400":
+ *         description: Get failed.
+ *         content:
+ *           application/json:
+ *             example:
+ *               error: 'The id parameter must be a positive integer'
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ */
+router.get('/:userId', validateParams, authUser, async function(req, res) {
     const userId = +req.params.userId;
     const user = await userModel.genericMethods.findById(userId);
 
     return res.json(user);
 });
 
-// Update info of user by id API
+/**
+ * @swagger
+ * /users/{userId}:
+ *   put:
+ *     summary: Update user info
+ *     tags: [User]
+ *     parameters:
+ *     - name: userId
+ *       in: path
+ *       description: User id to update info
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
+ *     requestBody:
+ *       description: User info
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/User"
+ *           example:
+ *             full_name: "Dang Duy Khang"
+ *             email: ddk9920011@gmail.com
+ *             phone: "0123456789"
+ *     responses:
+ *       "200":
+ *         description: Successful operation.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/User"
+ *             examples:
+ *               Change successfully:
+ *                 value:
+ *                    user_id: 1
+ *                    full_name: "Dang Duy Khang"
+ *                    email: ddk9920011@gmail.com
+ *                    phone: "0123456789"
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "400":
+ *         description: Get failed.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Invalid schema:
+ *                 value:
+ *                 - instancePath: /email
+ *                   schemaPath: "#/properties/email"
+ *                   keyword: type
+ *                   params:
+ *                     type: string
+ *                   message: must be string
+ *               Empty body:
+ *                 value:
+ *                   message: The request body must not be empty
+ *               Invalid parameter:
+ *                 value:
+ *                   error: The id parameter must be a positive integer
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ *       "403":
+ *         description: Not allowed user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Not allowed user!
+ */
 router.put('/:userId', validateParams, validate(userSchema), authUser, authRole(role.CUSTOMER), async function(req, res) {
     const userId = +req.params.userId;
     const updatedInfo = req.body;

@@ -119,7 +119,7 @@ const salt = bcrypt.genSaltSync(SALT_ROUNDS);
  *               Invalid schema:
  *                 value:
  *                 - instancePath: /password
- *                   schemaPath: "#/properties/last_name/password"
+ *                   schemaPath: "#/properties/password"
  *                   keyword: type
  *                   params:
  *                     type: string
