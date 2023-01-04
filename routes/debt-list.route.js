@@ -112,7 +112,7 @@ router.get("/:debtId",authRole(role.CUSTOMER),async function(req,res,next){
 })
 
 //Create new debt API (internal): /api/debtList/
-router.post("/",validate(debtCreateSchema),authRole(role.CUSTOMER),async function(req,res){
+router.post("/",validate(debtCreateSchema),authUser,authRole(role.CUSTOMER),async function(req,res){
     try{
         const user_id = +req.body.user_id || 0;
         const debt_account_number = req.body.debt_account_number || '';
@@ -174,7 +174,7 @@ router.post("/",validate(debtCreateSchema),authRole(role.CUSTOMER),async functio
 })
 
 //send OTP and create temp transaction API: /api/debtList/sendOtp
-router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
+router.post("/sendOtp",authUser,authRole(role.CUSTOMER),async function(req,res,next){
     try{
         const userId = +req.body.user_id || 0;
         const debtId = +req.body.debt_id || 0;
@@ -244,7 +244,7 @@ router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
     }
 })
 //API resend OTP for payment
-router.post("/re-sendOtp",authRole(role.CUSTOMER),async function(req,res){
+router.post("/re-sendOtp",authUser,authRole(role.CUSTOMER),async function(req,res){
     try{
         const userId = +req.body.user_id || 0;
         const debtId = +req.body.debt_id || 0;
@@ -289,7 +289,7 @@ router.post("/re-sendOtp",authRole(role.CUSTOMER),async function(req,res){
     }
 })
 //debt payment API (internal): /api/debtList/internal/verified-payment
-router.post("/internal/verified-payment",authRole(role.CUSTOMER),async function(req,res,next){
+router.post("/internal/verified-payment",authUser,authRole(role.CUSTOMER),async function(req,res,next){
     try{
         const _debtId = +req.body.debt_id || 0;
         const _userId = +req.body.user_id || 0;
@@ -353,7 +353,7 @@ router.post("/internal/verified-payment",authRole(role.CUSTOMER),async function(
 })
 
 //Cancel debt by debtId API: /api/debtList/cancelDebt/:debtId
-router.delete("/cancelDebt/:debtId",validate(debtCancelSchema),authRole(role.CUSTOMER),async function(req,res,next){
+router.delete("/cancelDebt/:debtId",authUser,validate(debtCancelSchema),authRole(role.CUSTOMER),async function(req,res,next){
     try {
         const _debtId = +req.params.debtId || 0;
         const _userId = +req.body.user_id || 0;
