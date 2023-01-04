@@ -1045,7 +1045,7 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
 /**
  * @swagger
  * /customers/desaccount:
- *   get:
+ *   post:
  *     summary: Receive account_number from other bank and query to send back to that bank
  *     tags: [Customer Transaction]
  *     requestBody:
@@ -1120,7 +1120,7 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
  */
 
 // Receive account_number from other bank and query to send back to that bank
-router.get("/desaccount", async (req, res) => {
+router.post("/desaccount", async (req, res) => {
     const { token, bank_code } = req.body
     try {
         // Get public key based on bank_code from infoVerification
@@ -1346,7 +1346,7 @@ router.post("/intertransaction/:id", async (req, res) => {
 /**
  * @swagger
  * /customers/intertransaction:
- *   get:
+ *   post:
  *     summary: Receive money from other bank ( intertransaction)
  *     tags: [Customer Transaction]
  *     requestBody:
@@ -1426,7 +1426,7 @@ router.post("/intertransaction/:id", async (req, res) => {
  *               message: Can not done the transaction
  */
 
-router.get("/intertransaction", async (req, res) => {
+router.post("/intertransaction", async (req, res) => {
     const { token, bank_code } = req.body
     console.log(req.body)
     console.log(token)
