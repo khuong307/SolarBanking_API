@@ -82,6 +82,7 @@
 
 import express from "express"
 import md5 from "md5"
+import crypto from "crypto"
 import moment from "moment"
 import bankingAccountModel from "../models/banking-account.model.js"
 import recipientModel from "../models/recipient.model.js"
@@ -97,6 +98,7 @@ import { generateDesTransfer, generateOtpContentTransfer, generateSrcTransfer } 
 import jwt from "../utils/jwt.js";
 import axios from "axios";
 import db from "../utils/db.js";
+import otherBank from "../utils/other_bank.js"
 
 
 const router = express.Router()
@@ -348,7 +350,7 @@ router.get("/:userId/bankaccount", validateParams, async (req, res) => {
  *               message: "Can not confirm the transaction"
  */
 
-// FIrst step : Check Info Inter Transaction Before Real Transfer
+// First step : Check Info Inter Transaction Before Real Transfer
 router.post("/:userId/intratransaction", validateParams, async (req, res) => {
     const infoTransaction = req.body
     const userId = +req.params.userId
@@ -498,8 +500,10 @@ router.post("/:userId/transaction/confirm", validateParams, async (req, res) => 
         // Generate otp
         const otp = generateOtp()
         // insert to table transaction but is_success will set false
-        const newTransaction = { ...infoTransaction, otp_code: otp, is_success: false,
-        transaction_created_at:moment(Date.now()).format("YYYY-MM-DD HH:mm:ss")}
+        const newTransaction = {
+            ...infoTransaction, otp_code: otp, is_success: false,
+            transaction_created_at: moment(Date.now()).format("YYYY-MM-DD HH:mm:ss")
+        }
         const result = await transactionModel.genericMethods.add(newTransaction)
 
         // Find source user by id
@@ -694,7 +698,7 @@ router.post("/intratransaction/:id", async (req, res) => {
         const infoTransaction = {
             isSavedRecipientTable,
             full_name: infoDesUser.full_name,
-            bank: "SOLAR BANKING",
+            bank: "SOLAR BANK",
             des_account_number: desBankAccount.account_number,
             transaction_amount: dataTransaction.transaction_amount,
             transaction_message: dataTransaction.transaction_message,
@@ -706,10 +710,10 @@ router.post("/intratransaction/:id", async (req, res) => {
         const subject = "Transfer Money"
         const srcMessage = generateSrcTransfer(infoSrcUser.full_name, srcBankAccount.account_number
             , dataTransaction.transaction_amount, srcBankAccount.balance, dataTransaction.transaction_message,
-            infoDesUser.email, dataTransaction.transaction_created_at)
+            infoSrcUser.email, dataTransaction.transaction_created_at)
         const desMessage = generateDesTransfer(infoDesUser.full_name, desBankAccount.account_number,
             dataTransaction.transaction_amount, desBankAccount.balance, dataTransaction.transaction_message,
-            desBankAccount.email, dataTransaction.transaction_created_at)
+            infoDesUser.email, dataTransaction.transaction_created_at)
         generateEmail(infoSrcUser.email, subject, srcMessage)
         generateEmail(infoDesUser.email, subject, desMessage)
 
@@ -806,8 +810,10 @@ router.post("/transaction/:id/otp", async (req, res) => {
         // Generate otp
         const otp = generateOtp()
         // update new otp code to transaction_table
-        await transactionModel.genericMethods.update(transactionId, { ...dataTransaction, otp_code: otp, 
-            transaction_created_at:moment(Date.now()).format("YYYY-MM-DD HH:mm:ss")})
+        await transactionModel.genericMethods.update(transactionId, {
+            ...dataTransaction, otp_code: otp,
+            transaction_created_at: moment(Date.now()).format("YYYY-MM-DD HH:mm:ss")
+        })
 
         // Send otp to user through email
         const subject = "Transfer Money"
@@ -902,9 +908,9 @@ router.post("/transaction/:id/otp", async (req, res) => {
  *                    transaction_amount: 500000,
  *                    transaction_message: "Transfer Money",
  *                    pay_transaction_fee: "SRC",
- *                    full_name: "Customer Name",
+ *                    full_name: "Andrew pham",
  *                    email: "",
- *                    phone: "",
+ *                    phone: null,
  *                    transaction_type: 2
  *                 }
  *       "400":
@@ -989,7 +995,7 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
 
         // Sending des_account_number to other bank to query info
         const result = await axios({
-            url: "http://ec2-3-80-72-113.compute-1.amazonaws.com:3001/accounts/external/get-info",
+            url: "http://ec2-35-171-9-165.compute-1.amazonaws.com:3001/accounts/external/get-info",
             method: "POST",
             data: infoVerification
         })
@@ -1001,7 +1007,7 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
             const newUser = {
                 full_name: result_des.name,
                 email: "",
-                phone: ""
+                phone: result_des.phone ? result_des.phone : ""
             }
             des_user_id = await trx("user").insert(newUser)
         }
@@ -1028,7 +1034,7 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
                 ...infoTransaction,
                 full_name: result_des.name,
                 email: "",
-                phone: "",
+                phone: result_des.phone,
                 transaction_type: 2
             }
         })
@@ -1242,53 +1248,59 @@ router.post("/intertransaction/:id", async (req, res) => {
             }
         }
 
-
         // Get info src
         const infoSrcUser = await userModel.genericMethods.findById(srcBankAccount.user_id)
-        // Combine all info src,transaction to prepare send to other bank
-        const infoSendOtherBank = { ...dataTransaction, ...infoSrcUser }
-        delete infoSendOtherBank.balance
 
-        // Encrypt info before send to other bank
-        const token = await jwt.generateAsyncToken(infoSendOtherBank, process.env.PRIVATE_KEY, EXPIRED_RSA_TIME)
-        const encryptedData = { token, bank_code: "SLB" }
+        // ----------------- START GIAO DỊCH --------------------------------- //
+        const timestamp = Date.now()
+        let obj = {
+            accountDesNumber: dataTransaction.des_account_number,
+            amount: dataTransaction.transaction_amount,
+            description: dataTransaction.transaction_message,
+            payTransactionFee: dataTransaction.pay_transaction_fee,
+            accountSrcNumber: dataTransaction.src_account_number,
+            slug: BANK_CODE
+        }
+        let data = JSON.stringify(obj)
+        const msgToken = md5(timestamp + data + process.env.SECRET_KEY)
 
-        const desEncryptedInfo = await axios({
-            url: "http://localhost:3050/api/customers/intertransaction",
-            method: "GET",
-            data: encryptedData
+        let dataSign = JSON.stringify(obj)
+        let signer = crypto.createSign("RSA-SHA256")
+        signer.update(dataSign)
+        let sign = signer.sign(process.env.PRIVATE_KEY, "hex")
+
+        const dataSendToOther = {
+            accountNumber:dataTransaction.src_account_number,
+            transactionInfo:{
+                accountDesNumber:dataTransaction.des_account_number,
+                amount:dataTransaction.transaction_amount,
+                description:dataTransaction.transaction_message,
+                payTransactionFee:dataTransaction.pay_transaction_fee
+            },
+            msgToken:msgToken,
+            timestamp:timestamp,
+            signature:sign,
+            slug:BANK_CODE
+        }
+
+        console.log(dataSendToOther)
+
+
+        // CALL API TO OTHER BANK
+        const resultDes = await axios({
+            url: "http://ec2-35-171-9-165.compute-1.amazonaws.com:3001/transactions/external/order-for-payment",
+            method: "POST",
+            data: dataSendToOther
         })
 
-        const { encryptToken, bank_code } = desEncryptedInfo.data.encryptedData
-        // Get public key based on bank_code from infoVerification
-        const bankInfo = await bankModel.genericMethods.findById(bank_code)
-        console.log(bankInfo)
-        // Check other bank is exist in database
-        if (bankInfo === null) {
-            return res.status(400).json({
+        // VERIFY GIAO DỊCH
+        let verify = otherBank.verifyTransactionDesBank(resultDes.data.data, resultDes.data.signature)
+        if (!verify) {
+            return res.status(401).json({
                 isSuccess: false,
-                message: "Bank doesn't belongs to system connectivity banks"
+                message: "Can not verified transaction of other bank"
             })
         }
-
-        // Verify exactly other bank is send this message
-        if (await jwt.verifyAsyncToken(encryptToken, bankInfo.public_key, EXPIRED_RSA_TIME) === null) {
-            return res.status(403).json({
-                isSuccess: false,
-                message: "Can not verified token"
-            })
-        }
-
-        // Decode token to get des_account_number
-        const decodedInfo = await jwt.decodeAsyncToken(encryptToken)
-        if (decodedInfo === null) {
-            return res.status(400).json({
-                isSuccess: false,
-                message: "Can not decode token"
-            })
-        }
-
-        const infoDesUser = decodedInfo.payload.payload
 
         // Update table Banking_account for balance updated
         await trx("banking_account").where({ account_number: srcBankAccount.account_number }).update(srcBankAccount)
@@ -1302,16 +1314,12 @@ router.post("/intertransaction/:id", async (req, res) => {
         let isSavedRecipientTable = false
         // Check des_account_number is saved to table recipient
         const resultRecipient = await recipientModel.checkExistByUserIdAndAccountNumber(srcBankAccount.user_id, dataTransaction.des_account_number)
-        if (resultRecipient === null) {
-            isSavedRecipientTable = false
-        } else {
+        if (resultRecipient) {
             isSavedRecipientTable = true
         }
         // Create info Transaction to send to client
         const infoTransaction = {
             isSavedRecipientTable,
-            full_name: infoDesUser.full_name,
-            bank: bankInfo.bank_name,
             des_account_number: dataTransaction.des_account_number,
             transaction_amount: dataTransaction.transaction_amount,
             transaction_message: dataTransaction.transaction_message,
@@ -1323,7 +1331,7 @@ router.post("/intertransaction/:id", async (req, res) => {
         const subject = "Transfer Money"
         const srcMessage = generateSrcTransfer(infoSrcUser.full_name, srcBankAccount.account_number
             , dataTransaction.transaction_amount, srcBankAccount.balance, dataTransaction.transaction_message,
-            infoDesUser.email, dataTransaction.transaction_created_at)
+            infoSrcUser.email, dataTransaction.transaction_created_at)
         generateEmail(infoSrcUser.email, subject, srcMessage)
 
         // Send to client inform transaction success
@@ -1561,7 +1569,7 @@ router.post("/intertransaction", async (req, res) => {
 
         delete desInfo.balance
         // Encrypt data to send back to other bank
-        desInfo = {...desInfo,des_account_number:infoReceive?.des_account_number}
+        desInfo = { ...desInfo, des_account_number: infoReceive?.des_account_number }
         const encryptToken = await jwt.generateAsyncToken(desInfo, process.env.PRIVATE_KEY, EXPIRED_RSA_TIME)
         const encryptedData = { encryptToken, bank_code: "SLB" }
 
