@@ -498,7 +498,8 @@ router.post("/:userId/transaction/confirm", validateParams, async (req, res) => 
         // Generate otp
         const otp = generateOtp()
         // insert to table transaction but is_success will set false
-        const newTransaction = { ...infoTransaction, otp_code: otp, is_success: false }
+        const newTransaction = { ...infoTransaction, otp_code: otp, is_success: false,
+        transaction_created_at:moment(Date.now()).format("YYYY-MM-DD HH:mm:ss")}
         const result = await transactionModel.genericMethods.add(newTransaction)
 
         // Find source user by id
@@ -805,7 +806,8 @@ router.post("/transaction/:id/otp", async (req, res) => {
         // Generate otp
         const otp = generateOtp()
         // update new otp code to transaction_table
-        await transactionModel.genericMethods.update(transactionId, { ...dataTransaction, otp_code: otp })
+        await transactionModel.genericMethods.update(transactionId, { ...dataTransaction, otp_code: otp, 
+            transaction_created_at:moment(Date.now()).format("YYYY-MM-DD HH:mm:ss")})
 
         // Send otp to user through email
         const subject = "Transfer Money"
