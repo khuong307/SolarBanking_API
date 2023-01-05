@@ -27,6 +27,49 @@
  *          phone: "0763937086"
  */
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Notification:
+ *       type: object
+ *       properties:
+ *         notification_id:
+ *           type: integer
+ *           description: The id of notification.
+ *         user_id:
+ *           type: integer
+ *           description: The id of user in notification.
+ *         transaction_id:
+ *           type: integer
+ *           description: The id of transaction in notification.
+ *         debt_id:
+ *           type: integer
+ *           description: The id of debt in notification.
+ *         notification_message:
+ *           type: string
+ *           description: The message in notification
+ *         is_seen:
+ *           type: boolean
+ *           description: The value to determine if the notification is seen
+ *         notification_created_at:
+ *           type: string
+ *           format: date-time
+ *           description: The time of notification is created
+ *         notification_title:
+ *           type: string
+ *           description: The title of notification
+ *       example:
+ *          notification_id: 1
+ *          user_id: 1
+ *          transaction_id: 2
+ *          debt_id: 4
+ *          notification_message: User ddkhang paid debt.
+ *          is_seen: 0
+ *          notification_created_at: 2023-01-05 10:00:00
+ *          notification_title: Debt Payment
+ */
+
 import express from 'express';
 import { readFile } from 'fs/promises';
 
@@ -107,7 +150,7 @@ const router = express.Router();
  *             example:
  *               message: Unauthorized user!
  *       "403":
- *         description: Not allowed user
+ *         description: User must be customer
  *         content:
  *           application/json:
  *             example:
@@ -179,7 +222,7 @@ router.get('/:userId/accounts', validateParams, authUser, authRole(role.CUSTOMER
  *             example:
  *               message: Unauthorized user!
  *       "403":
- *         description: Not allowed user
+ *         description: User must be customer
  *         content:
  *           application/json:
  *             example:
@@ -247,7 +290,7 @@ router.get('/:userId/savingAccounts', validateParams, authUser, authRole(role.CU
  *             example:
  *               message: Unauthorized user!
  *       "403":
- *         description: Not allowed user
+ *         description: User must be customer
  *         content:
  *           application/json:
  *             example:
@@ -397,7 +440,7 @@ router.get('/:userId', validateParams, authUser, async function(req, res) {
  *             example:
  *               message: Unauthorized user!
  *       "403":
- *         description: Not allowed user
+ *         description: User must be customer
  *         content:
  *           application/json:
  *             example:
@@ -418,7 +461,86 @@ router.put('/:userId', validateParams, validate(userSchema), authUser, authRole(
     return res.json(user);
 });
 
-// Get recipient list by user id API
+/**
+ * @swagger
+ * /users/{userId}/recipients:
+ *   get:
+ *     summary: Get recipient list
+ *     tags: [User]
+ *     parameters:
+ *     - name: userId
+ *       in: path
+ *       description: User id to get recipients
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
+ *     responses:
+ *       "200":
+ *         description: Successful operation.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user_id:
+ *                   type: integer
+ *                   description: The id of user to get recipients
+ *                 owner_id:
+ *                   type: integer
+ *                   description: The id of user in recipient list
+ *                 account_number:
+ *                   type: string
+ *                   description: The banking account of user in recipient list
+ *                 nick_name:
+ *                   type: string
+ *                   description: The nickname of user in recipient list
+ *                 bank_name:
+ *                   type: string
+ *                   description: The bank of user in recipient list
+ *                 bank_code:
+ *                   type: string
+ *                   description: The bank code of recipient bank
+ *             examples:
+ *               Get successfully:
+ *                 value:
+ *                    user_id: 1
+ *                    owner_id: 3
+ *                    account_number: "111111"
+ *                    nick_name: ddkhang
+ *                    bank_name: Solar Bank
+ *                    bank_code: SLB
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "400":
+ *         description: Get failed.
+ *         content:
+ *           application/json:
+ *             example:
+ *               error: The id parameter must be a positive integer
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ *       "403":
+ *         description: User must be customer
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Not allowed user!
+ */
 router.get('/:userId/recipients',validateParams, authUser, authRole(role.CUSTOMER), async function(req, res) {
     const userId = +req.params.userId;
     const recipients = await recipientModel.findByUserId(userId);
@@ -501,7 +623,97 @@ router.post('/:userId/recipients', validateParams, validate(recipientSchema), au
     }
 });
 
-// Update nickname of a recipient API
+/**
+ * @swagger
+ * /users/{userId}/recipients/{accountNumber}:
+ *   put:
+ *     summary: Update recipient info (nickname)
+ *     tags: [User]
+ *     parameters:
+ *     - name: userId
+ *       in: path
+ *       description: User id to update recipient
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     - name: accountNumber
+ *       in: path
+ *       description: Account number to update info
+ *       required: true
+ *       schema:
+ *         type: string
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
+ *     requestBody:
+ *       description: User info
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nick_name:
+ *                 type: string
+ *                 description: The new nickname of recipient
+ *           example:
+ *             nick_name: khang9901
+ *     responses:
+ *       "200":
+ *         description: Successful operation.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 account_number:
+ *                   type: string
+ *                   description: The account number of recipient
+ *                 nick_name:
+ *                   type: string
+ *                   description: The new nickname of recipient
+ *             examples:
+ *               Change successfully:
+ *                 value:
+ *                    account_number: "11111"
+ *                    nick_name: khang9901
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "400":
+ *         description: Change failed.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Empty body:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: The request body must not be empty!
+ *               Invalid parameter:
+ *                 value:
+ *                   error: The id parameter must be a positive integer
+ *               Wrong info:
+ *                 value:
+ *                   message: Account number or user id does not exist!
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ *       "403":
+ *         description: User must be customer
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Not allowed user!
+ */
 router.put('/:userId/recipients/:accountNumber', validateParams, authUser, authRole(role.CUSTOMER), async function(req, res) {
     const userId = +req.params.userId;
     const accountNumber = req.params.accountNumber;
@@ -523,7 +735,82 @@ router.put('/:userId/recipients/:accountNumber', validateParams, authUser, authR
     return res.json({ accountNumber, nick_name: nickname });
 });
 
-// Delete recipient API
+/**
+ * @swagger
+ * /users/{userId}/recipients/{accountNumber}:
+ *   delete:
+ *     summary: Delete a recipient
+ *     tags: [User]
+ *     parameters:
+ *     - name: userId
+ *       in: path
+ *       description: User id to delete recipient
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     - name: accountNumber
+ *       in: path
+ *       description: Account number to delete
+ *       required: true
+ *       schema:
+ *         type: string
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
+ *     responses:
+ *       "200":
+ *         description: Successful operation.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The status deletion
+ *                 message:
+ *                   type: string
+ *                   description: The message deletion
+ *             examples:
+ *               Delete successfully:
+ *                 value:
+ *                    isSuccess: true
+ *                    message: Delete successfully!
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "400":
+ *         description: Delete failed.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Invalid parameter:
+ *                 value:
+ *                   error: The id parameter must be a positive integer
+ *               Wrong info:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Account number or user id does not exist!
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ *       "403":
+ *         description: User must be customer
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Not allowed user!
+ */
 router.delete('/:userId/recipients/:accountNumber', validateParams, authUser, authRole(role.CUSTOMER), async function(req, res) {
     const userId = +req.params.userId;
     const accountNumber = req.params.accountNumber;
@@ -582,7 +869,82 @@ router.get('/:userId/history', validateParams, authUser, authRole(role.CUSTOMER)
 
 });
 
-// Get notification by user id
+/**
+ * @swagger
+ * /users/{userId}/notifications:
+ *   get:
+ *     summary: Get notification list
+ *     tags: [User]
+ *     parameters:
+ *     - name: userId
+ *       in: path
+ *       description: User id to get notifications
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     - name: limit
+ *       in: query
+ *       description: The return length of notification (if user doesn't pass value to parameter, it will return all)
+ *       schema:
+ *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
+ *     responses:
+ *       "200":
+ *         description: Successful operation.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/Notification"
+ *             examples:
+ *               Get successfully:
+ *                 value:
+ *                   - notification_id: 1
+ *                     user_id: 1
+ *                     transaction_id: 2
+ *                     debt_id: 4
+ *                     notification_message: User ddkhang paid debt.
+ *                     is_seen: 0
+ *                     notification_created_at: 2023-01-05 10:00:00
+ *                     notification_title: Debt Payment
+ *                   - notification_id: 2
+ *                     user_id: 1
+ *                     transaction_id: null
+ *                     debt_id: 5
+ *                     notification_message: User ddkhang cancelled debt.
+ *                     is_seen: 1
+ *                     notification_created_at: 2023-01-05 11:00:00
+ *                     notification_title: Debt Cancellation
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "400":
+ *         description: Get failed.
+ *         content:
+ *           application/json:
+ *             example:
+ *               error: The id parameter must be a positive integer
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ *       "403":
+ *         description: User must be customer
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Not allowed user!
+ */
 router.get('/:userId/notifications', validateParams, authUser, authRole(role.CUSTOMER), async function(req, res) {
     const MAX_NOTIFICATION_LENGTH = 1000;
     const userId = +req.params.userId;
@@ -593,7 +955,79 @@ router.get('/:userId/notifications', validateParams, authUser, authRole(role.CUS
     return res.json(notifications);
 });
 
-// Update is_seen status of all notifications
+/**
+ * @swagger
+ * /users/notifications/all:
+ *   put:
+ *     summary: Update all notifications is seen
+ *     tags: [User]
+ *     parameters:
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
+ *     requestBody:
+ *       description: Notification ids info
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               unseen_id_array:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: The id array of notification which is unseen
+ *           example:
+ *             unseen_id_array: [1,3,5,9]
+ *     responses:
+ *       "200":
+ *         description: Successful operation.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The update status
+ *                 message:
+ *                   type: string
+ *                   description: The update message
+ *             examples:
+ *               Change successfully:
+ *                 value:
+ *                    isSuccess: true
+ *                    message: Update is_seen successfully!
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "400":
+ *         description: Change failed.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: The response body must be an integer array!
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ *       "403":
+ *         description: User must be customer
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Not allowed user!
+ */
 router.put('/notifications/all', authUser, authRole(role.CUSTOMER), async function(req, res) {
     const unseenIdArray = req.body.unseen_id_array || [];
 
@@ -613,9 +1047,73 @@ router.put('/notifications/all', authUser, authRole(role.CUSTOMER), async functi
     });
 });
 
-// Update is_seen status by notification id
+/**
+ * @swagger
+ * /users/notifications/{notificationId}:
+ *   put:
+ *     summary: Update notification is seen
+ *     tags: [User]
+ *     parameters:
+ *     - name: notificationId
+ *       in: path
+ *       description: Notification id to update is seen.
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
+ *     responses:
+ *       "200":
+ *         description: Successful operation.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The update status
+ *                 message:
+ *                   type: string
+ *                   description: The update message
+ *             examples:
+ *               Change successfully:
+ *                 value:
+ *                    isSuccess: true
+ *                    message: Update is_seen successfully!
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "400":
+ *         description: Change failed.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: The notification id does not exist in the system!
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ *       "403":
+ *         description: User must be customer
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Not allowed user!
+ */
 router.put('/notifications/:notificationId', authUser, authRole(role.CUSTOMER), async function(req, res) {
-    const notificationId = +req.params.notificationId;
+    const notificationId = +req.params.notificationId || 0;
 
     const ret = await notificationModel.updateIsSeen(notificationId);
 
