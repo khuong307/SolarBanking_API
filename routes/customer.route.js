@@ -1655,7 +1655,7 @@ router.post("/save", async (req, res) => {
         let result = -1
         const recipient = await recipientModel.checkExistByUserIdAndAccountNumber(infoRecipient.user_id, infoRecipient.account_number)
         // Check account_number exist in db => if exist update nick_name, otherwise add to db
-        if (recipient === null) {
+        if (recipient === false) {
             result = await recipientModel.genericMethods.add(infoRecipient)
         } else {
             result = await recipientModel.updateNickNameByUserIdAndAccountNumber(infoRecipient.user_id, infoRecipient.account_number, infoRecipient.nick_name)
