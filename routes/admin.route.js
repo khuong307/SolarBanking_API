@@ -1,9 +1,13 @@
 import express from "express"
 import transactionModel from "../models/transactions.model.js";
 import { filterArray } from "../utils/array.js";
-import {authRole, authUser} from "../middlewares/auth.mdw.js";
+import {authorization, authRole, authUser} from "../middlewares/auth.mdw.js";
 import role from '../utils/role.js';
+import userModel from "../models/user.model.js";
+import userAccountModel from "../models/user-account.model.js";
 const router = express.Router()
+
+//router.get("/transactions", authUser, authorization(role.ADMIN), async(req,res)=>{
 
 router.get("/transactions", async(req,res)=>{
     var is_external = req.headers.is_external ? req.headers.is_external === 'true' : true;
@@ -56,4 +60,37 @@ router.get("/transactions", async(req,res)=>{
     }
 })
 
+router.get("/employees", async(req,res)=>{
+    try{
+        const employeeList = await userModel.findAllUser(role.EMPLOYEE)
+        res.status(200).json({
+            isSuccess:true,
+            employeeList
+        })
+    }catch(err){
+        console.log(err)
+        res.status(500).json({
+            isSuccess: false,
+            message:"Can not get employee list"
+        })
+    }
+})
+
+router.delete("/employee/:id", async (req,res)=>{
+    try{
+        const employeeId = req.params.id
+        var firstResponse = await userAccountModel.deleteUserAccount(employeeId)
+        var secondResponse = await userModel.genericMethods.delete(employeeId)
+        res.status(200).json({
+            isSuccess:true,
+            message:"Delete employee successfully"
+        })
+    }catch(err){
+        console.log(err)
+        res.status(500).json({
+            isSuccess: false,
+            message:"Delete employee unsuccessfully"
+        })
+    }
+})
 export default router

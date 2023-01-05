@@ -36,6 +36,7 @@ export default {
             .join('bank as B1', 'BA1.bank_code', '=', 'B1.bank_code')
             .join('bank as B2', 'BA2.bank_code', '=', 'B2.bank_code')
             .join('transaction_type as TT1', 'transaction.transaction_type', '=', 'TT1.transaction_type_id')
+            .where("transaction.is_success","=",1)
             .select(["transaction.transaction_id", 
                 "transaction.src_account_number", "B1.bank_name as src_bank_name", "B1.bank_code as src_bank_code",
                 "transaction.des_account_number", "B2.bank_name as des_bank_name", "B2.bank_code as des_bank_code",

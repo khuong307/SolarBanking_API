@@ -71,3 +71,22 @@ export function authRole(role) {
         next();
     }
 }
+
+export function authorization(role) {
+    return async function (req, res, next) {
+        const accessToken = req.headers.access_token;
+        const refreshToken = req.headers.refresh_token;
+        const secretKey = process.env.access_token_secret;
+        var tokenInfo = await jwt.verifyToken(accessToken, secretKey);
+        const username = tokenInfo.payload;
+        const account = await userAccountModel.genericMethods.findById(username);
+        const userType = await userTypeModel.genericMethods.findById(account.user_type_id);
+
+        if (role != userType.user_type_name)
+            return res.status(403).json({
+                message: 'Not allowed user!'
+            });
+
+        next();
+    }
+}

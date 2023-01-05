@@ -29,5 +29,9 @@ export default {
             .update({
                 password: hashedPassword
             });
-    }
+    },
+
+    async deleteUserAccount(userId) {
+        return await db('user_account').where('user_id', userId).del()
+    },
 };
