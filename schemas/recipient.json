@@ -5,7 +5,7 @@
       "type": "string"
     },
     "bank_code": {
-      "type": "number"
+      "type": "string"
     },
     "nick_name": {
       "type": "string",

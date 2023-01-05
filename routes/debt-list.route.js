@@ -1,5 +1,6 @@
 import express from 'express';
 import moment from 'moment';
+import numeral from 'numeral';
 import * as dotenv from 'dotenv';
 import { readFile } from 'fs/promises';
 
@@ -119,6 +120,8 @@ router.post("/",validate(debtCreateSchema),authUser,authRole(role.CUSTOMER),asyn
         const debt_amount = +req.body.debt_amount || 0;
         const debt_message= req.body.debt_message || '';
         if (user_id > 0){
+            const userReminder = await userModel.genericMethods.findById(user_id);
+            const accountReminder = await bankingAccountModel.findByUserIdAndAccountType(user_id, 1);
             let newDebt = {
                 user_id: user_id,
                 debt_account_number: debt_account_number,
@@ -137,7 +140,7 @@ router.post("/",validate(debtCreateSchema),authUser,authRole(role.CUSTOMER),asyn
                 user_id: recipientIndo[0].user_id,
                 transaction_id: null,
                 debt_id: ret[0],
-                notification_message: 'You have a new debt',
+                notification_message: `You have a new debt with amount ${numeral(debt_amount).format('0,0')} VND from ${userReminder.full_name} - ${accountReminder[0].account_number}`,
                 is_seen: 0,
                 notification_title: 'Debt Reminder',
                 notification_created_at: new Date()
@@ -156,17 +159,17 @@ router.post("/",validate(debtCreateSchema),authUser,authRole(role.CUSTOMER),asyn
             We've noted you have a payment reminder. Debit code is: ${ret[0]}.`;
             sendEmail(recipientIndo[0].email, VERIFY_EMAIL_SUBJECT, OTP_MESSAGE);
 
-            res.status(200).json({
+            return res.status(200).json({
                 isSuccess: true,
                 message: 'Create new debt successful!'
             })
         }
-        res.status(400).json({
+        return res.status(400).json({
             isSuccess: false,
             message: 'You do not have access'
         })
     }catch (err){
-        res.status(400).json({
+        return res.status(400).json({
             isSuccess: false,
             message: err.message
         })
@@ -297,6 +300,7 @@ router.post("/internal/verified-payment",authUser,authRole(role.CUSTOMER),async 
         const debtDetail = await debtListModel.genericMethods.findById(_debtId);
         if (debtDetail !== null){
             const senderId = _userId;
+            const senderInfo = await userModel.genericMethods.findById(senderId);
             const recipientId = debtDetail.user_id;
             const debt_amount = debtDetail.debt_amount;
             const transId = debtDetail.paid_transaction_id;
@@ -318,7 +322,7 @@ router.post("/internal/verified-payment",authUser,authRole(role.CUSTOMER),async 
                     user_id: recipientId,
                     transaction_id: transId,
                     debt_id: _debtId,
-                    notification_message: `Debit code ${_debtId} has just been paid.`,
+                    notification_message: `Debt code ${_debtId} has been paid by ${senderInfo.full_name} - ${debtDetail.debt_account_number}.`,
                     is_seen: 0,
                     notification_title: 'Debt Payment',
                     notification_created_at: new Date()
@@ -357,6 +361,8 @@ router.delete("/cancelDebt/:debtId",authUser,validate(debtCancelSchema),authRole
     try {
         const _debtId = +req.params.debtId || 0;
         const _userId = +req.body.user_id || 0;
+        const senderInfo = await userModel.genericMethods.findById(_userId);
+        const debtInfo = await debtListModel.genericMethods.findById(_debtId);;
         const messageCancel = req.body.debt_cancel_message || '';
         const objDebt = await debtListModel.getDebtById(_debtId);
         if (objDebt != null){
@@ -371,7 +377,7 @@ router.delete("/cancelDebt/:debtId",authUser,validate(debtCancelSchema),authRole
                     user_id: recipientId,
                     transaction_id: transactionId,
                     debt_id: _debtId,
-                    notification_message: messageCancel,
+                    notification_message: `Debt code ${_debtId} has been cancelled by ${senderInfo.full_name} - ${debtInfo.debt_account_number}`,
                     is_seen: 0,
                     notification_title: 'Debt Cancellation',
                     notification_created_at: new Date()

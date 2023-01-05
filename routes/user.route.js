@@ -72,6 +72,7 @@
 
 import express from 'express';
 import { readFile } from 'fs/promises';
+import * as dotenv from 'dotenv';
 
 import {authRole, authUser} from '../middlewares/auth.mdw.js';
 import role from '../utils/role.js';
@@ -85,6 +86,11 @@ import banking_accountModel from "../models/banking-account.model.js";
 import transactionModel from "../models/transaction.model.js";
 import {filterTransactionByTypeAndDes} from "../utils/bank.js";
 import notificationModel from "../models/notification.model.js";
+import axios from "axios";
+import {BANK_CODE} from "../utils/bank_constanst.js";
+import md5 from "md5";
+
+dotenv.config();
 
 const userSchema = JSON.parse(await readFile(new URL('../schemas/user.json', import.meta.url)));
 const recipientSchema = JSON.parse(await readFile(new URL('../schemas/recipient.json', import.meta.url)));
@@ -579,7 +585,33 @@ router.post('/:userId/recipients', validateParams, validate(recipientSchema), au
         });
 
     if (bankCode !== null) {
-        // Call API from connected bank to check existing account.
+        // const connectedBank = await bankModel.genericMethods.findById(bankCode);
+        // if (connectedBank !== null) {
+        //     const payload = {
+        //         accountNumber,
+        //         slug: BANK_CODE
+        //     };
+        //     const data = JSON.stringify(payload);
+        //     const timestamp = Date.now();
+        //     const msgToken = md5(timestamp + data + process.env.SECRET_KEY);
+        //     const infoVerification = {
+        //         accountNumber,
+        //         timestamp,
+        //         msgToken,
+        //         slug: BANK_CODE
+        //     };
+        //     const result = await axios({
+        //         url: "http://ec2-3-80-72-113.compute-1.amazonaws.com:3001/accounts/external/get-info",
+        //         method: "POST",
+        //         data: infoVerification
+        //     });
+        //     console.log(result);
+        // }
+        // else
+        //     return res.status(400).json({
+        //         isSuccess: false,
+        //         message: "Bank doesn't belongs to system connectivity banks"
+        //     });
     }
     else {
         if (bankingAccount !== null) {

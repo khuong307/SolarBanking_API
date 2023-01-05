@@ -1,3 +1,7 @@
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
 export const swaggerConfigOptions = {
     definition: {
         openapi: '3.0.0',
@@ -9,7 +13,7 @@ export const swaggerConfigOptions = {
         },
         servers: [
             {
-                url: "http://localhost:3030/api/",
+                url: `http://localhost:${process.env.app_port}/api/`,
             }
         ],
     },
