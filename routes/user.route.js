@@ -568,7 +568,139 @@ router.get('/:userId/recipients',validateParams, authUser, authRole(role.CUSTOME
     
 });
 
-// Add a recipient API
+/**
+ * @swagger
+ * /users/{userId}/recipients:
+ *   post:
+ *     summary: Add a new recipient
+ *     tags: [User]
+ *     parameters:
+ *     - name: userId
+ *       in: path
+ *       description: User id to add new recipient
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
+ *     requestBody:
+ *       description: Recipient info
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *             -  account_number
+ *             description:
+ *               account_number:
+ *                 type: string
+ *                 description: The account number of recipient
+ *               bank_code:
+ *                 type: string
+ *                 description: The code of bank's recipient (do not pass if add intra-bank)
+ *               nick_name:
+ *                 type: string
+ *                 description: The nickname of recipient
+ *           example:
+ *             account_number: "11111"
+ *             bank_code: "TXB"
+ *             nick_name: "khang"
+ *     responses:
+ *       "200":
+ *         description: Get new access token.
+ *         content:
+ *           application/json:
+ *             example:
+ *               accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "201":
+ *         description: Add successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               description:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The add status
+ *                 message:
+ *                   type: string
+ *                   description: The add message
+ *                 recipient:
+ *                   type: object
+ *                   description:
+ *                     user_id:
+ *                       type: integer
+ *                       description: The id of user owns the recipient list
+ *                     account_number:
+ *                       type: string
+ *                       description: The account number added to list
+ *                     nick_name:
+ *                       type: string
+ *                       description: The nickname of account added to list
+ *             example:
+ *               isSucess: true
+ *               message: Add recipient successfully!
+ *               recipient:
+ *                 user_id: 1
+ *                 account_number: "11111"
+ *                 nick_name: khang
+ *       "400":
+ *         description: Get failed.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Invalid schema:
+ *                 value:
+ *                 - instancePath: /account_number
+ *                   schemaPath: "#/properties/account_number"
+ *                   keyword: type
+ *                   params:
+ *                     type: string
+ *                   message: must be string
+ *               Existed recipient:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: The account number existed in the recipient list!
+ *               Add your account:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Can not add your account number to recipient list!
+ *               Add saving account:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: The account number must not be saving account!
+ *               Wrong account number:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: The account number does not exist in the banking system. Please check again!
+ *               Wrong connected bank:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Bank doesn't belong to system connectivity banks!
+ *               Invalid parameter:
+ *                 value:
+ *                   error: The id parameter must be a positive integer
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ *       "403":
+ *         description: User must be customer
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Not allowed user!
+ */
 router.post('/:userId/recipients', validateParams, validate(recipientSchema), authUser, authRole(role.CUSTOMER), async function(req, res) {
     const userId = +req.params.userId;
     const accountNumber = req.body.account_number;
@@ -585,33 +717,39 @@ router.post('/:userId/recipients', validateParams, validate(recipientSchema), au
         });
 
     if (bankCode !== null) {
-        // const connectedBank = await bankModel.genericMethods.findById(bankCode);
-        // if (connectedBank !== null) {
-        //     const payload = {
-        //         accountNumber,
-        //         slug: BANK_CODE
-        //     };
-        //     const data = JSON.stringify(payload);
-        //     const timestamp = Date.now();
-        //     const msgToken = md5(timestamp + data + process.env.SECRET_KEY);
-        //     const infoVerification = {
-        //         accountNumber,
-        //         timestamp,
-        //         msgToken,
-        //         slug: BANK_CODE
-        //     };
-        //     const result = await axios({
-        //         url: "http://ec2-3-80-72-113.compute-1.amazonaws.com:3001/accounts/external/get-info",
-        //         method: "POST",
-        //         data: infoVerification
-        //     });
-        //     console.log(result);
-        // }
-        // else
-        //     return res.status(400).json({
-        //         isSuccess: false,
-        //         message: "Bank doesn't belongs to system connectivity banks"
-        //     });
+        const connectedBank = await bankModel.genericMethods.findById(bankCode);
+        if (connectedBank !== null) {
+            const recipient = {
+                user_id: userId,
+                account_number: accountNumber,
+                nick_name: nickname
+            };
+            const interBankingAccount = await bankingAccountModel.genericMethods.findById(accountNumber);
+
+            if (interBankingAccount === null) {
+                const newBankingAccount = {
+                    account_number: accountNumber,
+                    balance: 0,
+                    user_id: null,
+                    bank_code: bankCode,
+                    is_spend_account: 1
+                }
+                await bankingAccountModel.genericMethods.add(newBankingAccount);
+            }
+
+            await recipientModel.genericMethods.add(recipient);
+
+            return res.status(201).json({
+                isSuccess: true,
+                message: 'Add recipient successfully!',
+                recipient
+            });
+        }
+        else
+            return res.status(400).json({
+                isSuccess: false,
+                message: "Bank doesn't belong to system connectivity banks!"
+            });
     }
     else {
         if (bankingAccount !== null) {
@@ -639,7 +777,6 @@ router.post('/:userId/recipients', validateParams, validate(recipientSchema), au
             };
 
             await recipientModel.genericMethods.add(recipient);
-            recipient.owner_id = bankingAccount.user_id;
 
             return res.status(201).json({
                 isSuccess: true,
@@ -1159,6 +1296,120 @@ router.put('/notifications/:notificationId', authUser, authRole(role.CUSTOMER), 
         isSuccess: true,
         message: 'Update is_seen successfully!'
     });
+});
+
+/**
+ * @swagger
+ * /users/internal/info:
+ *   get:
+ *     summary: Get user info from partner bank
+ *     tags: [User]
+ *     parameters:
+ *     - name: account_number
+ *       in: query
+ *       required: true
+ *       description: The account number from partner
+ *       schema:
+ *         type: string
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
+ *     responses:
+ *       "200":
+ *         description: Successful operation.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               description:
+ *                 accountNumber:
+ *                   type: string
+ *                   description: The account number from partner
+ *                 user:
+ *                   type: object
+ *                   description:
+ *                     id:
+ *                       type: integer
+ *                       description: The id of user from partner
+ *                     name:
+ *                       type: string
+ *                       description: The full name of user from partner
+ *                     username:
+ *                       type: string
+ *                       description: The login name of user from partner
+ *                     phone:
+ *                       type: string
+ *                       description: The phone number of user from partnetr
+ *                 statusCode:
+ *                   type: integer
+ *                   description: The status code from response
+ *                 message:
+ *                   type: string
+ *                   description: The get message
+ *             examples:
+ *               Get successfully:
+ *                 value:
+ *                   accountNumber: "59025838490"
+ *                   user:
+ *                     id: 1083
+ *                     name: Customer name
+ *                     username: usr100
+ *                     phone: "0123456879"
+ *                   statusCode: 200
+ *                   message: Lấy thông tin tài khoản thành công.
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "400":
+ *         description: Get failed.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               error: Get account info from connectivity bank failed!
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ */
+router.get('/internal/info', authUser, async function(req, res) {
+    const accountNumber = req.query.account_number;
+    const payload = {
+        accountNumber,
+        slug: BANK_CODE
+    };
+    const data = JSON.stringify(payload);
+    const timestamp = Date.now();
+    const msgToken = md5(timestamp + data + process.env.SECRET_KEY);
+    const infoVerification = {
+        accountNumber,
+        timestamp,
+        msgToken,
+        slug: BANK_CODE
+    };
+    const result = await axios({
+        url: "http://ec2-35-171-9-165.compute-1.amazonaws.com:3001/accounts/external/get-info",
+        method: "POST",
+        data: infoVerification
+    });
+
+    if (result.data.statusCode === 200) {
+        return res.json(result.data.data);
+    }
+    else
+        return res.status(400).json({
+            isSuccess: false,
+            message: 'Get account info from connectivity bank failed!'
+        });
 });
 
 export default router;
