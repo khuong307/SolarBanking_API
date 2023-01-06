@@ -9,6 +9,7 @@ import sendEmail from '../utils/mail.js';
 import validate, {validateParams} from '../middlewares/validate.mdw.js';
 import {authRole, authUser} from '../middlewares/auth.mdw.js';
 
+import {filterDebtByType} from "../utils/bank.js";
 import debtListModel from "../models/debt-list.model.js";
 import notificationModel from "../models/notification.model.js";
 import bankingAccountModel from "../models/banking-account.model.js";
@@ -26,49 +27,25 @@ const debtCancelSchema = JSON.parse(await readFile(new URL('../schemas/debt-canc
 const router = express.Router();
 
 //Get debt list of self-made by userId API: /api/debtList/selfMade
-router.get("/:userId/selfMade",authRole(role.CUSTOMER),async function(req,res){
+router.get("/:userId/listDebt",authRole(role.CUSTOMER),async function(req,res){
     try{
         //get userid from body
         const _userId = +req.params.userId || 0;
         const _user = await userModel.genericMethods.findById(_userId);
-
-        if (_user != null){
-            const listDebt = await debtListModel.listSelfMade(_userId);
-            res.status(200).json({
-                isSuccess: true,
-                message: "This is all debts of you",
-                list_debt: listDebt
-            })
-        }
-        else{
-            res.status(500).json({
-                isSuccess: false,
-                message: "You do not have access",
-            })
-        }
-    }
-    catch (err){
-        res.status(400).json({
-            isSuccess: false,
-            message: err.message
-        })
-    }
-})
-
-//Get debt list of other-made by userId API: /api/debtList/otherMade
-router.get("/:userId/otherMade",authRole(role.CUSTOMER),async function(req,res){
-    try{
-        //get userid from body
-        const _userId = +req.params.userId || 0;
         const SPENDING_ACCOUNT_TYPE = 1;
         const _userBanking = await bankingAccountModel.findByUserIdAndAccountType(_userId, SPENDING_ACCOUNT_TYPE);
-        if (_userBanking.length !== 0){
-            const userAccountNumber = _userBanking[0].account_number;
-            const listDebt = await debtListModel.listOtherMade(userAccountNumber);
+        const userAccountNumber = _userBanking.length !== 0 ? _userBanking[0].account_number : '';
+        if (_user != null){
+            const listSelfMade = await debtListModel.listSelfMade(_userId);
+            const listOtherMade = await debtListModel.listOtherMade(userAccountNumber);
+
+            const self_debt_list = await filterDebtByType(listSelfMade,1);
+            const other_debt_list = await filterDebtByType(listOtherMade,2);
             res.status(200).json({
                 isSuccess: true,
                 message: "This is all debts of you",
-                list_debt: listDebt
+                self_debt_list,
+                other_debt_list
             })
         }
         else{
@@ -113,7 +90,7 @@ router.get("/:debtId",authRole(role.CUSTOMER),async function(req,res,next){
 })
 
 //Create new debt API (internal): /api/debtList/
-router.post("/",validate(debtCreateSchema),authUser,authRole(role.CUSTOMER),async function(req,res){
+router.post("/",validate(debtCreateSchema),authRole(role.CUSTOMER),async function(req,res){
     try{
         const user_id = +req.body.user_id || 0;
         const debt_account_number = req.body.debt_account_number || '';
@@ -177,7 +154,7 @@ router.post("/",validate(debtCreateSchema),authUser,authRole(role.CUSTOMER),asyn
 })
 
 //send OTP and create temp transaction API: /api/debtList/sendOtp
-router.post("/sendOtp",authUser,authRole(role.CUSTOMER),async function(req,res,next){
+router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
     try{
         const userId = +req.body.user_id || 0;
         const debtId = +req.body.debt_id || 0;
@@ -247,7 +224,7 @@ router.post("/sendOtp",authUser,authRole(role.CUSTOMER),async function(req,res,n
     }
 })
 //API resend OTP for payment
-router.post("/re-sendOtp",authUser,authRole(role.CUSTOMER),async function(req,res){
+router.post("/re-sendOtp",authRole(role.CUSTOMER),async function(req,res){
     try{
         const userId = +req.body.user_id || 0;
         const debtId = +req.body.debt_id || 0;
@@ -292,7 +269,7 @@ router.post("/re-sendOtp",authUser,authRole(role.CUSTOMER),async function(req,re
     }
 })
 //debt payment API (internal): /api/debtList/internal/verified-payment
-router.post("/internal/verified-payment",authUser,authRole(role.CUSTOMER),async function(req,res,next){
+router.post("/internal/verified-payment",authRole(role.CUSTOMER),async function(req,res,next){
     try{
         const _debtId = +req.body.debt_id || 0;
         const _userId = +req.body.user_id || 0;
@@ -357,7 +334,7 @@ router.post("/internal/verified-payment",authUser,authRole(role.CUSTOMER),async 
 })
 
 //Cancel debt by debtId API: /api/debtList/cancelDebt/:debtId
-router.delete("/cancelDebt/:debtId",authUser,validate(debtCancelSchema),authRole(role.CUSTOMER),async function(req,res,next){
+router.delete("/cancelDebt/:debtId",validate(debtCancelSchema),authRole(role.CUSTOMER),async function(req,res,next){
     try {
         const _debtId = +req.params.debtId || 0;
         const _userId = +req.body.user_id || 0;

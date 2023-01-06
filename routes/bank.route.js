@@ -25,7 +25,7 @@ router.get("/infoUser",async function(req,res){
     try{
         const account_number = req.body.account_number;
         const userInfo = await bankingAccountModel.getInfoRecipientBy(account_number);
-        if (userInfo){
+        if (userInfo.length > 0){
             let userResponse = {
                 full_name: userInfo[0].full_name,
                 email: userInfo[0].email,
@@ -38,7 +38,7 @@ router.get("/infoUser",async function(req,res){
         }
         res.status(500).json({
             isSuccess:false,
-            message:"Can not get user info"
+            message:"Can not find user info"
         })
     }catch (err){
         res.status(400).json({

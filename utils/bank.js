@@ -94,7 +94,28 @@ export function generateRefreshToken(){
     });
     return str
 }
-
+export async function filterDebtByType(debts,type){
+    const ans = [];
+    if (debts != null){
+        for (const debt of debts){
+            //show all debts created by self
+            if (type === 1){
+                const other_side = debt.debt_account_number;
+                const other = await banking_accountModel.genericMethods.findByCol("account_number", other_side);
+                const info = await userModel.genericMethods.findById(other.user_id);
+                debt.debtor_fullname = info.full_name;
+                ans.push(debt);
+            }
+            else{
+                const info = await banking_accountModel.getInfoRecipientById(debt.user_id);
+                debt.reminder_fullname = info[0].full_name;
+                debt.reminder_accountnumber = info[0].account_number;
+                ans.push(debt);
+            }
+        }
+    }
+    return ans;
+}
 export async function filterTransactionByTypeAndDes(transactions, type, src, isSLB) {
     const ans = []
     if (transactions != null){
