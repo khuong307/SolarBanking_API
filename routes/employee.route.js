@@ -911,22 +911,44 @@ router.get('/bank_account' ,authUser, authRole(role.EMPLOYEE),  async function(r
  *                      transaction_created_at: 2022-12-30T07:37:57.000Z,
  *                      transaction_type: 1,
  *                      other_fullname: 'Dang Duy Khang'
- *                   },{
- *                      transaction_id: 82,
- *                      src_account_number: '28069884',
- *                      des_account_number: '71873611',
- *                      transaction_amount: 1000000,
- *                      transaction_message: 'Li xi nam moi Happy New Year',
+ *                   }]
+ *                   paid_debt_list: [{
+ *                      transaction_id: 10,
+ *                      src_account_number: '71873611',
+ *                      des_account_number: '28069884',
+ *                      transaction_amount: 20000,
+ *                      transaction_message: 'bánh mì + gửi xe',
  *                      pay_transaction_fee: 'SRC',
  *                      is_success: 1,
- *                      transaction_created_at: 2023-01-01T11:22:00.000Z,
+ *                      transaction_created_at: 2023-01-03T11:22:00.000Z,
  *                      transaction_type: 1,
- *                      other_fullname: 'Lam Bao Ngoc'
+ *                      other_fullname: 'Nguyen Vu Duy Khuong'
  *                   }]
- *                   paid_debt_list: []
  *                   received_debt_list: []
- *                   charge_by_SLB: []
- *                   received_from_others: []
+ *                   charge_by_SLB: [{
+ *                      transaction_id: 29,
+ *                      src_account_number: 'SLB',
+ *                      des_account_number: '71873611',
+ *                      transaction_amount: 50000,
+ *                      transaction_message: 'SLB Charge 50,000 VND at 2023-01-03T11:22:00.000Z',
+ *                      pay_transaction_fee: 'SRC',
+ *                      is_success: 1,
+ *                      transaction_created_at: 2023-01-03T11:22:00.000Z,
+ *                      transaction_type: 1,
+ *                      other_fullname: 'Nguyen Vu Duy Khuong'
+ *                   }]
+ *                   received_from_others: [{
+ *                      transaction_id: 29,
+ *                      src_account_number: '23434009',
+ *                      des_account_number: '71873611',
+ *                      transaction_amount: 100000,
+ *                      transaction_message: 'Hung gui Ngoc tien an sang nhe',
+ *                      pay_transaction_fee: 'SRC',
+ *                      is_success: 1,
+ *                      transaction_created_at: 2023-01-06T11:22:00.000Z,
+ *                      transaction_type: 1,
+ *                      other_fullname: 'Nguyen An Hung'
+ *                   }]
  *               Get new access token:
  *                 value:
  *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
