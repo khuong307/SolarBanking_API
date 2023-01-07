@@ -1200,6 +1200,7 @@ router.post("/desaccount", async (req, res) => {
 router.post("/intertransaction/:id", async (req, res) => {
     const transactionId = req.params.id
     const otpInfo = req.body
+    console.log(otpInfo)
     // Using trx as a transaction object:
     const trx = await db.transaction();
     try {

@@ -2,6 +2,7 @@ import randomString from "randomstring";
 import banking_accountModel from "../models/banking-account.model.js";
 import numeral from 'numeral'
 import userModel from "../models/user.model.js";
+import bankModel from "../models/bank.model.js";
 
 export function balanceToInt(value) {
     return parseInt(value.replaceAll(',', ''))
@@ -135,6 +136,8 @@ export async function filterTransactionByTypeAndDes(transactions, type, src, isS
                         if (trans.src_account_number != "SLB") {
                             const info = await userModel.genericMethods.findById(other.user_id)
                             trans.other_fullname = info.full_name
+                            const bankInfo = await bankModel.genericMethods.findById(other.bank_code)
+                            trans.other_bank_name = bankInfo.bank_name
                             ans.push(trans)
                         }
                     }

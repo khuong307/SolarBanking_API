@@ -1015,12 +1015,17 @@ router.get('/:userId/history', validateParams, authUser, authRole(role.CUSTOMER)
         })
     }
     else{
+        const now = new Date()
+        now.setHours(now.getHours() + 7) // UTC 7.
+        const days30 = new Date()
+        days30.setDate(now.getDate() - 30)
+
         const accessInfo = userInfo.account_number
         const chargeData = await transactionModel.genericMethods.findBy2ColMany("des_account_number", accessInfo, "src_account_number", "SLB")
-        const all_transaction = await transactionModel.genericMethods.findByColMany("src_account_number", accessInfo)
+        const all_transaction = await transactionModel.genericMethods.findByColManyWithDate("src_account_number", accessInfo, days30, now)
         const transfer_list_by_customer = await filterTransactionByTypeAndDes(all_transaction, 1, 1,false)
         const charge_by_SLB = await filterTransactionByTypeAndDes(chargeData, 1, 1, true)
-        const paid_debt_list = await filterTransactionByTypeAndDes(all_transaction, 2, false)
+        const paid_debt_list  = await filterTransactionByTypeAndDes(all_transaction, 2, 1, false)
 
         const received_list = await transactionModel.genericMethods.findByColMany("des_account_number", accessInfo)
         const received_from_others = await filterTransactionByTypeAndDes(received_list, 1, 2, false)

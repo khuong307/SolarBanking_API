@@ -217,14 +217,14 @@ router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
             // }
             //Create transaction
             let newTransaction = {
-                src_account_number: senderInfo[0].account_number,
-                des_account_number: debtorAccountNumber,
+                src_account_number: debtorAccountNumber,
+                des_account_number:  senderInfo[0].account_number,
                 transaction_amount: debtInfo.debt_amount > 0 ? debtInfo.debt_amount : 0,
                 otp_code: otp,
                 transaction_message : '',
                 pay_transaction_fee: 'DES',
                 is_success: false,
-                transaction_type: 1,
+                transaction_type: 2,
                 transaction_created_at: moment().add(process.env.otp_time, 's').toDate()
             };
             const ret = await transactionsModel.genericMethods.add(newTransaction);

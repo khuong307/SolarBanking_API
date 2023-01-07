@@ -730,7 +730,7 @@ router.get('/customer/transactions/:accessInfo', authUser, authRole(role.EMPLOYE
         const all_transaction = await transactionModel.genericMethods.findByColMany("src_account_number", accessInfo)
         const transfer_list_by_customer = await filterTransactionByTypeAndDes(all_transaction, 1, 1,false)
         const charge_by_SLB = await filterTransactionByTypeAndDes(chargeData, 1, 1, true)
-        const paid_debt_list = await filterTransactionByTypeAndDes(all_transaction, 2, false)
+        const paid_debt_list = await filterTransactionByTypeAndDes(all_transaction, 2,1, false)
 
         const received_list = await transactionModel.genericMethods.findByColMany("des_account_number", accessInfo)
         const received_from_others = await filterTransactionByTypeAndDes(received_list, 1, 2, false)
