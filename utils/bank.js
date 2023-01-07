@@ -147,3 +147,8 @@ export async function filterTransactionByTypeAndDes(transactions, type, src, isS
     }
     return ans
 }
+
+export async function isBankingAccountLocked(accountNumber) {
+    const bankingAccount = await banking_accountModel.genericMethods.findById(accountNumber);
+    return bankingAccount.is_spend_account === -1;
+}
