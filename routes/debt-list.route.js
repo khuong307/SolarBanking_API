@@ -26,8 +26,8 @@ const debtCancelSchema = JSON.parse(await readFile(new URL('../schemas/debt-canc
 
 const router = express.Router();
 
-//Get debt list of self-made by userId API: /api/debtList/selfMade
-router.get("/:userId/listDebt",authRole(role.CUSTOMER),async function(req,res){
+//Get debt list by userId API
+router.get("/:userId/list",authRole(role.CUSTOMER),async function(req,res){
     try{
         //get userid from body
         const _userId = +req.params.userId || 0;
@@ -35,12 +35,14 @@ router.get("/:userId/listDebt",authRole(role.CUSTOMER),async function(req,res){
         const SPENDING_ACCOUNT_TYPE = 1;
         const _userBanking = await bankingAccountModel.findByUserIdAndAccountType(_userId, SPENDING_ACCOUNT_TYPE);
         const userAccountNumber = _userBanking.length !== 0 ? _userBanking[0].account_number : '';
+
         if (_user != null){
             const listSelfMade = await debtListModel.listSelfMade(_userId);
             const listOtherMade = await debtListModel.listOtherMade(userAccountNumber);
-
             const self_debt_list = await filterDebtByType(listSelfMade,1);
             const other_debt_list = await filterDebtByType(listOtherMade,2);
+            console.log(self_debt_list)
+            console.log(other_debt_list)
             res.status(200).json({
                 isSuccess: true,
                 message: "This is all debts of you",
@@ -63,7 +65,7 @@ router.get("/:userId/listDebt",authRole(role.CUSTOMER),async function(req,res){
     }
 })
 
-//Get detail of debt by debtId API : /api/debtList/:debtId
+//Get detail of debt by debtId API
 router.get("/:debtId",authRole(role.CUSTOMER),async function(req,res,next){
     try {
         const _debtId= +req.params.debtId || 0;
@@ -153,6 +155,41 @@ router.post("/",validate(debtCreateSchema),authRole(role.CUSTOMER),async functio
     }
 })
 
+//check balance
+router.get("/:userId/checkBalance",async function(req,res){
+    try {
+        const user_id = +req.params.userId;
+        const balance = +req.body.amount;
+        console.log(balance);
+        const _user = await userModel.genericMethods.findById(user_id);
+        if (_user != null){
+            const SPENDING_ACCOUNT_TYPE = 1;
+            const _userBanking = await bankingAccountModel.findByUserIdAndAccountType(user_id, SPENDING_ACCOUNT_TYPE);
+            const userAccountNumber = _userBanking.length !== 0 ? _userBanking[0].account_number : '';
+            const userBalance = _userBanking.length !== 0 ? _userBanking[0].balance : '';
+            if (balance > userBalance){
+                return res.status(200).json({
+                    isEnough: false,
+                    message: "Your balance is not enough to make the payment"
+                })
+            }
+            return res.status(200).json({
+                isEnough: true,
+                message: "Your balance is enough to make the payment"
+            })
+        }
+        res.status(500).json({
+            isEnough: false,
+            message: "User is not exist"
+        })
+    }catch (err) {
+        res.status(400).json({
+            isEnough: false,
+            message: err.message
+        })
+    }
+})
+
 //send OTP and create temp transaction API: /api/debtList/sendOtp
 router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
     try{
@@ -173,13 +210,13 @@ router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
             const nameDebtor = debtorInfo[0].full_name || "";
             const balanceDebtor = debtorInfo[0].balance || 0;
 
-            const checkBalance = await bankingAccountModel.checkBalanceOfUserByAccountNumber(userAccountNumber,balanceDebtor);
-            if (!checkBalance){
-                return res.status(500).json({
-                    isSuccess: false,
-                    message: "Your balance is not enough to make the payment"
-                })
-            }
+            // const checkBalance = await bankingAccountModel.checkBalanceOfUserByAccountNumber(userAccountNumber,balanceDebtor);
+            // if (!checkBalance){
+            //     return res.status(500).json({
+            //         isSuccess: false,
+            //         message: "Your balance is not enough to make the payment"
+            //     })
+            // }
             //Create transaction
             let newTransaction = {
                 src_account_number: senderInfo[0].account_number,
