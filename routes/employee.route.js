@@ -397,6 +397,19 @@ router.post('/customer', authUser, authRole(role.EMPLOYEE), validate(newCustomer
         const email_content = generateContent(full_name, username, email, password, spend_account, initial_balance)
         mail(email, "[SOLAR BANKING] [CUSTOMER INFORMATION]", email_content)
 
+        //save transfer
+        const newRecord = {
+            src_account_number: 'SLB',
+            des_account_number: spend_account,
+            transaction_amount: balanceToInt(initial_balance),
+            otp_code: "000000",
+            transaction_message: "Initial Balance",
+            pay_transaction_fee: 0,
+            is_success: true,
+            transaction_type: 1
+        }
+        const newTransaction = await transactionModel.genericMethods.add(newRecord)
+
         res.status(200).json({
             success: true,
             message: "Created new customer.",
@@ -549,8 +562,20 @@ router.post('/customers',authUser, authRole(role.EMPLOYEE), validate(customerLis
                 username,
                 email,
                 id: countS++
-
             })
+
+            //save transfer
+            const newRecord = {
+                src_account_number: 'SLB',
+                des_account_number: spend_account,
+                transaction_amount: balanceToInt(initial_balance),
+                otp_code: "000000",
+                transaction_message: "Initial Balance",
+                pay_transaction_fee: 0,
+                is_success: true,
+                transaction_type: 1
+            }
+            const newTransaction = await transactionModel.genericMethods.add(newRecord)
         }
     }
     res.status(200).json({
