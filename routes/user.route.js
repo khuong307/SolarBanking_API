@@ -1417,4 +1417,34 @@ router.get('/internal/info', authUser, async function(req, res) {
         });
 });
 
+router.post('/:userId/spendingAccounts/lock', validateParams, authUser, async function(req, res) {
+    const userId = +req.params.userId;
+    const ret = await bankingAccountModel.lockBankingAccount(userId);
+
+    if (ret === 0)
+        return res.status(400).json({
+            isSuccess: false,
+            message: 'Can not lock account this user!'
+        });
+    return res.json({
+        isSuccess: true,
+        message: 'Lock account successfully!'
+    });
+});
+
+router.post('/:userId/spendingAccounts/unlock', validateParams, authUser, async function(req, res) {
+    const userId = +req.params.userId;
+    const ret = await bankingAccountModel.unlockBankingAccount(userId);
+
+    if (ret === 0)
+        return res.status(400).json({
+            isSuccess: false,
+            message: 'Can not unlock account this user!'
+        });
+    return res.json({
+        isSuccess: true,
+        message: 'Unlock account successfully!'
+    });
+});
+
 export default router;

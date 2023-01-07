@@ -3,6 +3,7 @@ import userAccountModel from '../models/user-account.model.js';
 import userTypeModel from '../models/user-type.model.js';
 import moment from 'moment';
 import * as dotenv from 'dotenv';
+import bankingAccountModel from "../models/banking-account.model.js";
 
 dotenv.config();
 
@@ -89,4 +90,18 @@ export function authorization(role) {
 
         next();
     }
+}
+
+export async function authBankingAccount(req, res, next) {
+    const ACTIVE_SPENDING_ACCOUNT_TYPE = 1;
+    const userId = req.headers.user_id;
+    const bankingAccount = await bankingAccountModel.findByUserIdAndAccountType(userId, ACTIVE_SPENDING_ACCOUNT_TYPE);
+
+    if (bankingAccount.length === 0) {
+        return res.status(400).json({
+            message: 'You can not send or receive money because spending account is locked! Please unlock to execute transaction.'
+        });
+    }
+
+    next();
 }

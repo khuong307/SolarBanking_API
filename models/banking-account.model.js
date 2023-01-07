@@ -89,5 +89,25 @@ export default {
                 'user.phone',
                 'banking_account.balance');
         return res.length !==0 ? res[0] :null
+    },
+
+    lockBankingAccount(userId) {
+        const ACTIVE_TYPE = 1;
+        const INACTIVE_TYPE = -1;
+
+        return db('banking_account').where({
+            user_id: userId,
+            is_spend_account: ACTIVE_TYPE
+        }).update('is_spend_account', INACTIVE_TYPE);
+    },
+
+    unlockBankingAccount(userId) {
+        const ACTIVE_TYPE = 1;
+        const INACTIVE_TYPE = -1;
+
+        return db('banking_account').where({
+            user_id: userId,
+            is_spend_account: INACTIVE_TYPE
+        }).update('is_spend_account', ACTIVE_TYPE);
     }
 };
