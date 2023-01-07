@@ -52,7 +52,7 @@ export function generateSrcTransfer(fullname, account, amount, balance, message,
         "Solar Banking has a transaction success from your request.\n" +
         "Here is transaction information:\n" +
         `Account Number: ${account}\n` +
-        `Money: -${amount}\n` +
+        `Money: - ${numeral(amount).format('0,0')}\n` +
         `Current Balance: ${numeral(balance).format('0,0')}\n` +
         `Message: ${message}\n` +
         `Time: ${time}\n` +
@@ -66,7 +66,7 @@ export function generateDesTransfer(fullname, account, amount, balance, message,
         "Solar Banking receive a request to transfer money to your invidual account.\n" +
         "Here is transaction information:\n" +
         `Account Number: ${account}\n` +
-        `Money: +${amount}\n` +
+        `Money: + ${numeral(amount).format('0,0')}\n` +
         `Current Balance: ${numeral(balance).format('0,0')}\n` +
         `Message: ${message}\n` +
         `Time: ${time}\n` +

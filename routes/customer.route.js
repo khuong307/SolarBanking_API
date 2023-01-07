@@ -502,6 +502,7 @@ router.post("/:userId/transaction/confirm", validateParams, async (req, res) => 
         // insert to table transaction but is_success will set false
         const newTransaction = {
             ...infoTransaction, otp_code: otp, is_success: false,
+            transaction_type:1,
             transaction_created_at: moment(Date.now()).format("YYYY-MM-DD HH:mm:ss")
         }
         const result = await transactionModel.genericMethods.add(newTransaction)
@@ -1196,6 +1197,95 @@ router.post("/desaccount", async (req, res) => {
     }
 })
 
+
+/**
+ * @swagger
+ * /customers/intertransaction/{id}:
+ *   post:
+ *     summary: Final step - Inter transaction Valid OTP and Transaction completed 
+ *     tags: [Customer Transaction]
+ *     parameters:
+ *     - name: id
+ *       in: path
+ *       description: id belongs to a transaction
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     requestBody:
+ *       description: Information OTP
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               otpCode:
+ *                 type: string
+ *                 description: 6 digits verification for a transaction.
+ *               created_at:
+ *                 type: string
+ *                 description: timestamp send otp to server
+ *           example:
+ *             otpCode: "324789"
+ *             created_at: "2023-01-04 09:43:00"
+ *     responses:
+ *       "200":
+ *         description: Confirm OTP is valid.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The status of confirm transaction.
+ *                 infoTransaction:
+ *                   type: object
+ *                   description: The information of a transaction
+ *             example:
+ *               isSuccess: true
+ *               infoTransaction: {
+ *                 isSavedRecipientTable: true,
+ *                 full_name: "Lam Thanh Hong",
+ *                 des_account_number: "01325183",
+ *                 bank: "Taixiu Bank",
+ *                 transaction_amount: 500000,
+ *                 transaction_message: "Transfer Money",
+ *                 transaction_fee: 15000,
+ *                 total: 515000
+ *               }
+ *       "401":
+ *         description: Verified Token Receive Failed.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: "Can not verified transaction of other bank"
+ *       "403":
+ *         description: Transaction failed.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Invalid transaction:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Transaction has already completed
+ *               Expired OTP Code:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Transaction failed! OTP Code is expired
+ *               Wrong amount of money transaction:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Transaction failed! Balance is not enough for transfer
+ *       "500":
+ *         description: Invalid Information Intra Transaction.
+ *         content:
+ *           application/json:
+ *             example:
+ *               isSuccess: false
+ *               message: "Can not confirm the transaction"
+ */
+
 // Final Step: Valid OTP and Transaction completed
 router.post("/intertransaction/:id", async (req, res) => {
     const transactionId = req.params.id
@@ -1573,6 +1663,13 @@ router.post("/intertransaction", async (req, res) => {
         desInfo = { ...desInfo, des_account_number: infoReceive?.des_account_number }
         const encryptToken = await jwt.generateAsyncToken(desInfo, process.env.PRIVATE_KEY, EXPIRED_RSA_TIME)
         const encryptedData = { encryptToken, bank_code: "SLB" }
+
+         // Generate email send to recipient  ( email of src will be in charge of other bank)
+         const subject = "Transfer Money"
+         const desMessage = generateDesTransfer(desInfo.full_name, recipientAccount.account_number
+             , infoReceive.transaction_amount, recipientAccount.balance, infoReceive.transaction_message,
+             desInfo.email, infoReceive.transaction_created_at)
+         generateEmail(desInfo.email, subject, desMessage)
 
         await trx.commit()
         console.log(result)
