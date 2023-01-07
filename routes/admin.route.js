@@ -5,10 +5,19 @@ import {authorization, authRole, authUser} from "../middlewares/auth.mdw.js";
 import role from '../utils/role.js';
 import userModel from "../models/user.model.js";
 import userAccountModel from "../models/user-account.model.js";
+import {
+    generateRefreshToken
+} from '../utils/bank.js'
+import { readFile } from 'fs/promises';
+import validate, {validateParams} from '../middlewares/validate.mdw.js';
+import bcrypt from 'bcrypt'
+
+const userSchema = JSON.parse(await readFile(new URL('../schemas/user.json', import.meta.url)));
+const employeeSchema = JSON.parse(await readFile(new URL('../schemas/employee.json', import.meta.url)));
+
 const router = express.Router()
 
 //router.get("/transactions", authUser, authorization(role.ADMIN), async(req,res)=>{
-
 router.get("/transactions", async(req,res)=>{
     var is_external = req.headers.is_external ? req.headers.is_external === 'true' : true;
     var start_date = req.headers.start_date;
@@ -60,6 +69,7 @@ router.get("/transactions", async(req,res)=>{
     }
 })
 
+// router.get("/employees", authUser, authorization(role.ADMIN), async(req,res)=>{
 router.get("/employees", async(req,res)=>{
     try{
         const employeeList = await userModel.findAllUser(role.EMPLOYEE)
@@ -76,6 +86,7 @@ router.get("/employees", async(req,res)=>{
     }
 })
 
+// router.delete("/employee/:id", authUser, authorization(role.ADMIN), async (req,res)=>{
 router.delete("/employee/:id", async (req,res)=>{
     try{
         const employeeId = req.params.id
@@ -93,4 +104,73 @@ router.delete("/employee/:id", async (req,res)=>{
         })
     }
 })
+
+// router.post('/employee', authUser, authorization(role.ADMIN), validate(employeeSchema), async function (req, res) {
+router.post('/employee', validate(employeeSchema), async function (req, res) {
+    const {full_name, email, phone, username, password} = req.body
+    try {
+        const isEmailExisted = await userModel.genericMethods.isExistedByCol("email", email)
+        const isUsernameExited = await userAccountModel.genericMethods.isExistedByCol("username", username)
+        if(isEmailExisted == true || isUsernameExited == true){
+            res.status(409).json({
+                isSuccess: false,
+                message: "This email or username has already been used!"
+            })
+        }
+        const hashPassword = bcrypt.hashSync(password, 10)
+        const newUser = {full_name, email, phone}
+        const newUserAccount = {username, password: hashPassword, user_type_id: 1, refresh_token: generateRefreshToken()}
+
+        newUserAccount.user_id = await userModel.genericMethods.add(newUser)
+        await userAccountModel.genericMethods.add(newUserAccount)
+
+        res.status(200).json({
+            success: true,
+            message: "Create new employee successfully",
+        })
+    } catch (e) {
+        console.log(e)
+        res.status(500).json({
+            isSuccess: false,
+            message:"Cannot create new employee"
+        })
+    }
+    
+});
+
+// router.put('/employee/:userId', authUser, authorization(role.ADMIN), validate(userSchema), async function(req, res) {
+router.put('/employee/:userId', validateParams, validate(userSchema), async function(req, res) {
+    try {
+        const userId = +req.params.userId; 
+        const updatedInfo = req.body;
+        const user = await userModel.genericMethods.findById(userId);
+        const userAccount = await userAccountModel.findByUserId(userId);
+        if (user == null || userAccount == null || userAccount.user_type_id != 2) {
+            return res.status(400).json({
+                isSuccess: false,
+                message: 'Cannot find this employee'
+            });
+        }
+        if (updatedInfo && Object.keys(updatedInfo).length === 0 && Object.getPrototypeOf(updatedInfo) === Object.prototype) {
+            return res.status(400).json({
+                isSuccess: false,
+                message: 'The request body must not be empty'
+            });
+        }
+    
+        await userModel.genericMethods.update(userId, updatedInfo);
+    
+        return res.status(400).json({
+            isSuccess: true,
+            message: "Update employee infomation successfully",
+            user: user
+        });
+    } catch (e) {
+        console.log(err)
+        res.status(500).json({
+            isSuccess: false,
+            message:"Cannot update employee infomation"
+        })
+    }
+});
 export default router

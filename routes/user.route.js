@@ -1015,12 +1015,17 @@ router.get('/:userId/history', validateParams, authUser, authRole(role.CUSTOMER)
         })
     }
     else{
+        const now = new Date()
+        now.setHours(now.getHours() + 7) // UTC 7.
+        const days30 = new Date()
+        days30.setDate(now.getDate() - 30)
+
         const accessInfo = userInfo.account_number
         const chargeData = await transactionModel.genericMethods.findBy2ColMany("des_account_number", accessInfo, "src_account_number", "SLB")
-        const all_transaction = await transactionModel.genericMethods.findByColMany("src_account_number", accessInfo)
+        const all_transaction = await transactionModel.genericMethods.findByColManyWithDate("src_account_number", accessInfo, days30, now)
         const transfer_list_by_customer = await filterTransactionByTypeAndDes(all_transaction, 1, 1,false)
         const charge_by_SLB = await filterTransactionByTypeAndDes(chargeData, 1, 1, true)
-        const paid_debt_list = await filterTransactionByTypeAndDes(all_transaction, 2, false)
+        const paid_debt_list  = await filterTransactionByTypeAndDes(all_transaction, 2, 1, false)
 
         const received_list = await transactionModel.genericMethods.findByColMany("des_account_number", accessInfo)
         const received_from_others = await filterTransactionByTypeAndDes(received_list, 1, 2, false)
@@ -1328,13 +1333,13 @@ router.put('/notifications/:notificationId', authUser, authRole(role.CUSTOMER), 
  *           application/json:
  *             schema:
  *               type: object
- *               description:
+ *               properties:
  *                 accountNumber:
  *                   type: string
  *                   description: The account number from partner
  *                 user:
  *                   type: object
- *                   description:
+ *                   properties:
  *                     id:
  *                       type: integer
  *                       description: The id of user from partner
@@ -1410,6 +1415,36 @@ router.get('/internal/info', authUser, async function(req, res) {
             isSuccess: false,
             message: 'Get account info from connectivity bank failed!'
         });
+});
+
+router.post('/:userId/spendingAccounts/lock', validateParams, authUser, async function(req, res) {
+    const userId = +req.params.userId;
+    const ret = await bankingAccountModel.lockBankingAccount(userId);
+
+    if (ret === 0)
+        return res.status(400).json({
+            isSuccess: false,
+            message: 'Can not lock account this user!'
+        });
+    return res.json({
+        isSuccess: true,
+        message: 'Lock account successfully!'
+    });
+});
+
+router.post('/:userId/spendingAccounts/unlock', validateParams, authUser, async function(req, res) {
+    const userId = +req.params.userId;
+    const ret = await bankingAccountModel.unlockBankingAccount(userId);
+
+    if (ret === 0)
+        return res.status(400).json({
+            isSuccess: false,
+            message: 'Can not unlock account this user!'
+        });
+    return res.json({
+        isSuccess: true,
+        message: 'Unlock account successfully!'
+    });
 });
 
 export default router;

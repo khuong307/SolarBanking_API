@@ -2,6 +2,7 @@ import randomString from "randomstring";
 import banking_accountModel from "../models/banking-account.model.js";
 import numeral from 'numeral'
 import userModel from "../models/user.model.js";
+import bankModel from "../models/bank.model.js";
 
 export function balanceToInt(value) {
     return parseInt(value.replaceAll(',', ''))
@@ -51,7 +52,7 @@ export function generateSrcTransfer(fullname, account, amount, balance, message,
         "Solar Banking has a transaction success from your request.\n" +
         "Here is transaction information:\n" +
         `Account Number: ${account}\n` +
-        `Money: -${amount}\n` +
+        `Money: - ${numeral(amount).format('0,0')}\n` +
         `Current Balance: ${numeral(balance).format('0,0')}\n` +
         `Message: ${message}\n` +
         `Time: ${time}\n` +
@@ -65,7 +66,7 @@ export function generateDesTransfer(fullname, account, amount, balance, message,
         "Solar Banking receive a request to transfer money to your invidual account.\n" +
         "Here is transaction information:\n" +
         `Account Number: ${account}\n` +
-        `Money: +${amount}\n` +
+        `Money: + ${numeral(amount).format('0,0')}\n` +
         `Current Balance: ${numeral(balance).format('0,0')}\n` +
         `Message: ${message}\n` +
         `Time: ${time}\n` +
@@ -135,6 +136,8 @@ export async function filterTransactionByTypeAndDes(transactions, type, src, isS
                         if (trans.src_account_number != "SLB") {
                             const info = await userModel.genericMethods.findById(other.user_id)
                             trans.other_fullname = info.full_name
+                            const bankInfo = await bankModel.genericMethods.findById(other.bank_code)
+                            trans.other_bank_name = bankInfo.bank_name
                             ans.push(trans)
                         }
                     }
@@ -143,4 +146,9 @@ export async function filterTransactionByTypeAndDes(transactions, type, src, isS
         }
     }
     return ans
+}
+
+export async function isBankingAccountLocked(accountNumber) {
+    const bankingAccount = await banking_accountModel.genericMethods.findById(accountNumber);
+    return bankingAccount.is_spend_account === -1;
 }
