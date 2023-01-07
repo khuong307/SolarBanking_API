@@ -3,28 +3,6 @@
  * tags:
  *   name: Employee
  *   description: API to handle Customer's Request, supports Employee
- * components:
- *   schemas:
- *     User:
- *       type: object
- *       properties:
- *         user_id:
- *           type: integer
- *           description: The id of user.
- *         full_name:
- *           type: string
- *           description: The full name of user.
- *         email:
- *           type: integer
- *           description: The email of user.
- *         phone:
- *           type: string
- *           description: The phone number of user.
- *       example:
- *          user_id: 1
- *          full_name: "Dang Duy Khang"
- *          email: ddk992001@gmail.com
- *          phone: "0763937086"
  */
 import express from 'express';
 import bcrypt from 'bcrypt'
@@ -60,7 +38,7 @@ const router = express.Router();
  * @swagger
  * /employee/customer/{accessInfo}:
  *   get:
- *     summary: Get information of a customer base on account number / username.
+ *     summary: Get information of a customer based on account number / username.
  *     tags: [Employee]
  *     parameters:
  *     - name: accessInfo
@@ -85,17 +63,47 @@ const router = express.Router();
  *         content:
  *           application/json:
  *             schema:
- *               $ref: "#/components/schemas/BankingAccount"
- *             example:
- *                isFound: true
- *                message: "Success"
- *                customer_info: {
+ *               type: object
+ *               properties:
+ *                 isFound:
+ *                   type: boolean
+ *                   description: The get status
+ *                 message:
+ *                   type: string
+ *                   description: The get message
+ *                 customer_info:
+ *                   type: object
+ *                   properties:
+ *                     full_name:
+ *                       type: string
+ *                       description: The full name of customer
+ *                     email:
+ *                       type: string
+ *                       description: The email of customer
+ *                     phone:
+ *                       type: string
+ *                       description: The phone number of customer
+ *                     account_number:
+ *                       type: string
+ *                       description: The account number of customer
+ *                     balance:
+ *                       type: integer
+ *                       description: The balance of banking account
+ *             examples:
+ *               Get successfully:
+ *                 value:
+ *                   isFound: true
+ *                   message: "Success"
+ *                   customer_info: {
  *                         full_name: "Nguyen Vu Duy Khuong",
  *                         email: "duykhuong3072001@gmail.com",
  *                         phone: "0903024916",
  *                         account_number: "203391882",
  *                         balance: 1000000
- *                     }
+ *                   }
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
  *       "209":
  *         description: Wrong information of customer.
  *         content:
@@ -109,11 +117,11 @@ const router = express.Router();
  *             example:
  *               message: Unauthorized user!
  *       "500":
- *         description: Sever Interal Error
+ *         description: Server Internal Error
  *         content:
  *           application/json:
  *             example:
- *               message: Sever Interal Error
+ *               message: Server Internal Error
  */
 router.get('/customer/:accessInfo', authUser, async function (req, res) {
     const {accessInfo} = req.params
@@ -164,18 +172,6 @@ router.get('/customer/:accessInfo', authUser, async function (req, res) {
  *       required: true
  *       schema:
  *         type: string
- *     - name: amount
- *       in: body
- *       description: Amount of money wabt to charge
- *       required: true
- *       schema:
- *         type: integer
- *     - name: message
- *       in: body
- *       description: Message when charge money
- *       required: true
- *       schema:
- *         type: string
  *     - name: access_token
  *       in: header
  *       description: A string is used to access authentication features
@@ -186,41 +182,105 @@ router.get('/customer/:accessInfo', authUser, async function (req, res) {
  *       description: A string is used to refresh access token if expired
  *       schema:
  *         type: string
+ *     requestBody:
+ *       description: The charge info
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               amount:
+ *                 type: string
+ *                 description: Amount of money want to charge
+ *               message:
+ *                 type: string
+ *                 description: Message when charge money
+ *           example:
+ *             amount: "100000"
+ *             message: The initial payment
  *     responses:
  *       "200":
  *         description: Successful operation.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: "#/components/schemas/BankingAccount"
- *             example:
- *                isFound: true
- *                transaction_info: {
+ *               type: object
+ *               properties:
+ *                 isFound:
+ *                   type: boolean
+ *                   description: The status of finding account number
+ *                 transaction_info:
+ *                   type: object
+ *                   properties:
+ *                     time:
+ *                       type: string
+ *                       format: date
+ *                       description: The transaction date
+ *                     transaction_message:
+ *                       type: string
+ *                       description: The transaction message
+ *                     account_number:
+ *                       type: string
+ *                       description: The account number of customer
+ *                     new_balance:
+ *                       type: integer
+ *                       description: The new balance in customer banking account
+ *                     email:
+ *                       type: integer
+ *                       description: The email of customer
+ *                     customer_fullname:
+ *                       type: string
+ *                       description: The full name of customer
+ *             examples:
+ *               Transfer successfully:
+ *                 value:
+ *                   isFound: true
+ *                   transaction_info: {
  *                      time: "2022-12-01",
  *                      transaction_message: "Transfer Money SLB",
  *                      account_number: "203391882",
  *                      new_balance: 1000000,
  *                      email: "duykhuong3072001@gmail.com",
  *                      customer_fullname: "Nguyen Vu Duy Khuong"
- *                  }
+ *                    }
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
  *       "209":
  *         description: Wrong information of customer.
  *         content:
  *           application/json:
  *             example:
  *               message: 'Account number does not exist!'
+ *       "400":
+ *         description: Invalid schema
+ *         content:
+ *           application/json:
+ *             example:
+ *               - instancePath: /account_number
+ *                 schemaPath: "#/properties/account_number"
+ *                 keyword: type
+ *                 params:
+ *                   type: string
+ *                 message: must be string
  *       "401":
  *         description: Unauthorized user
  *         content:
  *           application/json:
  *             example:
  *               message: Unauthorized user!
- *       "500":
- *         description: Sever Interal Error
+ *       "403":
+ *         description: User must be employee
  *         content:
  *           application/json:
  *             example:
- *               message: Sever Interal Error
+ *               message: Not allowed user!
+ *       "500":
+ *         description: Server Internal Error
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Server Internal Error
  */
 router.post('/customer/:account_number',  authUser, authRole(role.EMPLOYEE), validate(transferEmployee), async function (req, res) {
     const {account_number} = req.params
@@ -283,48 +343,6 @@ router.post('/customer/:account_number',  authUser, authRole(role.EMPLOYEE), val
  *     summary: Create one new customer.
  *     tags: [Employee]
  *     parameters:
- *     - name: full_name
- *       in: body
- *       description: Customer's Full name
- *       required: true
- *       schema:
- *         type: string
- *     - name: phone
- *       in: body
- *       description: Customer phone number
- *       required: true
- *       schema:
- *         type: string
- *     - name: email
- *       in: body
- *       description: Customer email
- *       required: true
- *       schema:
- *         type: string
- *     - name: username
- *       in: body
- *       description: Customer username when login
- *       required: true
- *       schema:
- *         type: string
- *     - name: password
- *       in: body
- *       description: Customer password (hash with bcrypt)
- *       required: true
- *       schema:
- *         type: string
- *     - name: spend_account
- *       in: body
- *       description: Account Number (System auto generated(
- *       required: true
- *       schema:
- *         type: string
- *     - name: initial_balance
- *       in: body
- *       description: Intial balance of customer want to have.
- *       required: true
- *       schema:
- *         type: string
  *     - name: access_token
  *       in: header
  *       description: A string is used to access authentication features
@@ -335,42 +353,125 @@ router.post('/customer/:account_number',  authUser, authRole(role.EMPLOYEE), val
  *       description: A string is used to refresh access token if expired
  *       schema:
  *         type: string
+ *     requestBody:
+ *       description: Customer info
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               full_name:
+ *                 type: string
+ *                 description: The full name of customer
+ *               phone:
+ *                 type: string
+ *                 description: THe phone number of customer
+ *               email:
+ *                 type: string
+ *                 description: The email of customer
+ *               username:
+ *                 type: string
+ *                 description: The username of customer
+ *               password:
+ *                 type: string
+ *                 description: The password of customer
+ *               spend_account:
+ *                 type: string
+ *                 description: The spending account number of customer
+ *               initial_balance:
+ *                 type: integer
+ *                 description: The initial balance in spending account
+ *           example:
+ *             full_name: Nguyen Vu Duy Khuong
+ *             phone: "0903024916"
+ *             email: khuong30072001@gmail.com
+ *             username: kolgo
+ *             password: "12345"
+ *             spend_account: "203391882"
+ *             initial_balance: 1000000
  *     responses:
  *       "200":
  *         description: Successful operation.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: "#/components/schemas/BankingAccount"
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   description: The create status
+ *                 message:
+ *                   type: string
+ *                   description: The create message
+ *                 customer_info:
+ *                   type: object
+ *                   properties:
+ *                     full_name:
+ *                       type: string
+ *                       description: The full name of customer
+ *                     email:
+ *                       type: string
+ *                       description: The email of customer
+ *                     phone:
+ *                       type: string
+ *                       description: The phone number of customer
+ *                     username:
+ *                       type: string
+ *                       description: The username of customer
+ *                     hashedPassword:
+ *                       type: string
+ *                       description: The hashed password of login account
+ *             examples:
+ *               Create successfully:
+ *                 value:
+ *                   success: true
+ *                   message: "Created new customer."
+ *                   customer_info: {
+ *                     full_name: "Nguyen Vu Duy Khuong",
+ *                     email: "duykhuong3072001@gmail.com",
+ *                     phone: "0903024916",
+ *                     username: "kolgo",
+ *                     hashPassword: "@213213dfasdwe1231231wasadawq"
+ *                   }
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "400":
+ *         description: Invalid schema
+ *         content:
+ *           application/json:
  *             example:
- *                  - success: true
- *                    message: "Created new customer."
- *                    customer_info: {
- *                      full_name: "Nguyen Vu Duy Khuong",
- *                      email: "duykhuong3072001@gmail.com",
- *                      phone: "0903024916",
- *                      username: "kolgo",
- *                      hashPassword: "@213213dfasdwe1231231wasadawq"
-*                     }
+ *               - instancePath: /phone
+ *                 schemaPath: "#/properties/phone"
+ *                 keyword: type
+ *                 params:
+ *                   type: string
+ *                 message: must be string
  *       "409":
  *         description: Wrong information of customer.
  *         content:
  *           application/json:
  *             example:
- *               - message: 'Account number does not exist!'
- *                 success: false,
+ *               message: 'Account number does not exist!'
+ *               success: false
  *       "401":
  *         description: Unauthorized user
  *         content:
  *           application/json:
  *             example:
  *               message: Unauthorized user!
- *       "500":
- *         description: Sever Interal Error
+ *       "403":
+ *         description: User must be employee
  *         content:
  *           application/json:
  *             example:
- *               message: Sever Interal Error
+ *               message: Not allowed user!
+ *       "500":
+ *         description: Server Internal Error
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Server Internal Error
  */
 router.post('/customer', authUser, authRole(role.EMPLOYEE), validate(newCustomerSchema), async function (req, res) {
     const {full_name, email, phone, username, password, spend_account, initial_balance } = req.body
@@ -431,48 +532,6 @@ router.post('/customer', authUser, authRole(role.EMPLOYEE), validate(newCustomer
  *     summary: Create many new customers.
  *     tags: [Employee]
  *     parameters:
- *     - name: full_name
- *       in: body
- *       description: Customer's Full name
- *       required: true
- *       schema:
- *         type: string
- *     - name: phone
- *       in: body
- *       description: Customer phone number
- *       required: true
- *       schema:
- *         type: string
- *     - name: email
- *       in: body
- *       description: Customer email
- *       required: true
- *       schema:
- *         type: string
- *     - name: username
- *       in: body
- *       description: Customer username when login
- *       required: true
- *       schema:
- *         type: string
- *     - name: password
- *       in: body
- *       description: Customer password (hash with bcrypt)
- *       required: true
- *       schema:
- *         type: string
- *     - name: spend_account
- *       in: body
- *       description: Account Number (System auto generated(
- *       required: true
- *       schema:
- *         type: string
- *     - name: initial_balance
- *       in: body
- *       description: Intial balance of customer want to have.
- *       required: true
- *       schema:
- *         type: string
  *     - name: access_token
  *       in: header
  *       description: A string is used to access authentication features
@@ -483,47 +542,143 @@ router.post('/customer', authUser, authRole(role.EMPLOYEE), validate(newCustomer
  *       description: A string is used to refresh access token if expired
  *       schema:
  *         type: string
+ *     requestBody:
+ *       description: List of customer info
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: array
+ *             items:
+ *               type: object
+ *               properties:
+ *                 full_name:
+ *                   type: string
+ *                   description: The full name of customer
+ *                 phone:
+ *                   type: string
+ *                   description: THe phone number of customer
+ *                 email:
+ *                   type: string
+ *                   description: The email of customer
+ *                 username:
+ *                   type: string
+ *                   description: The username of customer
+ *                 password:
+ *                   type: string
+ *                   description: The password of customer
+ *                 spend_account:
+ *                   type: string
+ *                   description: The spending account number of customer
+ *                 initial_balance:
+ *                   type: integer
+ *                   description: The initial balance in spending account
+ *           example:
+ *             -  full_name: Nguyen Vu Duy Khuong
+ *                phone: "0903024916"
+ *                email: khuong30072001@gmail.com
+ *                username: kolgo
+ *                password: "12345"
+ *                spend_account: "203391882"
+ *                initial_balance: 1000000
+ *             -  full_name: Dang Duy Khang
+ *                phone: "0763937086"
+ *                email: ddk992001@gmail.com
+ *                username: ddk992001
+ *                password: "12345"
+ *                spend_account: "336982355"
+ *                initial_balance: 500000
  *     responses:
  *       "200":
  *         description: Successful operation.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: "#/components/schemas/BankingAccount"
+ *               type: object
+ *               properties:
+ *                 success_array:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       username:
+ *                         type: string
+ *                         description: The successfully created username of customer
+ *                       id:
+ *                         type: string
+ *                         description: The successfully created id of customer
+ *                       email:
+ *                         type: string
+ *                         description: The successfully created email of customer
+ *                 fail_array:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       username:
+ *                         type: string
+ *                         description: The failed created username of customer
+ *                       id:
+ *                         type: string
+ *                         description: The failed created username of customer
+ *                       email:
+ *                         type: string
+ *                         description: The failed created username of customer
+ *             examples:
+ *               Created successfully:
+ *                 value:
+ *                 - success_array: [{
+ *                     username: "kolgo",
+ *                     id: 1,
+ *                     email: "duykhuong3072001@gmail.com"
+ *                   }, {
+ *                     username: "ngoclam",
+ *                     id: 2,
+ *                     email: "ngoclam99@gmail.com"
+ *                   }]
+ *                   fail_array: [{
+ *                     username: "chinchin00",
+ *                     id: 3,
+ *                     email: "trungchinh99@gmail.com"
+ *                   }]
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "400":
+ *         description: Invalid schema
+ *         content:
+ *           application/json:
  *             example:
- *                  - success_array: [{
- *                      username: "kolgo",
- *                      id: 1,
- *                      email: "duykhuong3072001@gmail.com"
- *                  }, {
- *                      username: "ngoclam",
- *                      id: 2,
- *                      email: "ngoclam99@gmail.com"
- *                  }]
- *                    fail_array: [{
- *                      username: "chinchin00",
- *                      id: 3,
- *                      email: "trungchinh99@gmail.com"
- *                    }]
+ *               - instancePath: /phone
+ *                 schemaPath: "#/properties/phone"
+ *                 keyword: type
+ *                 params:
+ *                   type: string
+ *                 message: must be string
  *       "409":
  *         description: Wrong information of customer.
  *         content:
  *           application/json:
  *             example:
- *               - message: 'Account number does not exist!'
- *                 success: false,
+ *               message: 'Account number does not exist!'
+ *               success: false
  *       "401":
  *         description: Unauthorized user
  *         content:
  *           application/json:
  *             example:
  *               message: Unauthorized user!
- *       "500":
- *         description: Sever Interal Error
+ *       "403":
+ *         description: User must be employee
  *         content:
  *           application/json:
  *             example:
- *               message: Sever Interal Error
+ *               message: Not allowed user!
+ *       "500":
+ *         description: Server Internal Error
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Server Internal Error
  */
 router.post('/customers',authUser, authRole(role.EMPLOYEE), validate(customerListSchema), async function (req, res) {
     const successArray = []
@@ -588,7 +743,7 @@ router.post('/customers',authUser, authRole(role.EMPLOYEE), validate(customerLis
  * @swagger
  * /employee/bank_account:
  *  get:
- *     summary: Auto generate a new account number for new custoemr.
+ *     summary: Auto generate a new account number for new customer.
  *     tags: [Employee]
  *     parameters:
  *     - name: access_token
@@ -607,22 +762,40 @@ router.post('/customers',authUser, authRole(role.EMPLOYEE), validate(customerLis
  *         content:
  *           application/json:
  *             schema:
- *               $ref: "#/components/schemas/BankingAccount"
- *             example:
- *                  - account_number: "348837126"
- *                    success: true
+ *               type: object
+ *               properties:
+ *                 account_number:
+ *                   type: string
+ *                   description: The generated account number
+ *                 success:
+ *                   type: boolean
+ *                   description: The generation status
+ *             examples:
+ *               Get successfully:
+ *                 value:
+ *                   account_number: "348837126"
+ *                   success: true
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
  *       "401":
  *         description: Unauthorized user
  *         content:
  *           application/json:
  *             example:
  *               message: Unauthorized user!
- *       "500":
- *         description: Sever Interal Error
+ *       "403":
+ *         description: User must be employee
  *         content:
  *           application/json:
  *             example:
- *               message: Sever Interal Error
+ *               message: Not allowed user!
+ *       "500":
+ *         description: Server Internal Error
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Server Internal Error
  */
 router.get('/bank_account' ,authUser, authRole(role.EMPLOYEE),  async function(req, res){
     var account = await generateAccount()
@@ -635,9 +808,9 @@ router.get('/bank_account' ,authUser, authRole(role.EMPLOYEE),  async function(r
 //transaction
 /**
  * @swagger
- * /employee/customer//transaction/{accessInfo}:
+ * /employee/customer/transaction/{accessInfo}:
  *   get:
- *     summary: Get information of a customer base on account number / username.
+ *     summary: Get all transaction of a customer based on account number / username.
  *     tags: [Employee]
  *     parameters:
  *     - name: accessInfo
@@ -662,10 +835,72 @@ router.get('/bank_account' ,authUser, authRole(role.EMPLOYEE),  async function(r
  *         content:
  *           application/json:
  *             schema:
- *               $ref: "#/components/schemas/BankingAccount"
- *             example:
- *                isFound: true
- *                transfer_list_by_customer: [{
+ *               type: object
+ *               properties:
+ *                 isFound:
+ *                   type: boolean
+ *                   description: The get status
+ *                 transfer_list_by_customer:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       transaction_id:
+ *                         type: integer
+ *                         description: The transaction id
+ *                       src_account_number:
+ *                         type: string
+ *                         description: The account number execute transaction
+ *                       des_account_number:
+ *                         type: string
+ *                         description: The account number receive amount from transaction
+ *                       transaction_amount:
+ *                         type: integer
+ *                         description: The amount of transaction
+ *                       transaction_message:
+ *                         type: string
+ *                         description: The message of transaction
+ *                       pay_transaction_fee:
+ *                         type: string
+ *                         description: Which account number pay for tranfer fee (SRC or DES)
+ *                       is_success:
+ *                         type: boolean
+ *                         description: The transaction status
+ *                       transaction_created_at:
+ *                         type: string
+ *                         format: date-time
+ *                         description: The created date-time transaction
+ *                       transaction_type:
+ *                         type: integer
+ *                         description: The type of transaction (debt payment or transfer)
+ *                       other_fullname:
+ *                         type: string
+ *                         description: The full name of received account
+ *                 paid_debt_list:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                 received_debt_list:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                 charge_by_SLB:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                 received_from_others:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *             examples:
+ *               Get successfully:
+ *                 value:
+ *                   isFound: true
+ *                   transfer_list_by_customer: [{
  *                      transaction_id: 80,
  *                      src_account_number: '28069884',
  *                      des_account_number: '32709550',
@@ -676,7 +911,7 @@ router.get('/bank_account' ,authUser, authRole(role.EMPLOYEE),  async function(r
  *                      transaction_created_at: 2022-12-30T07:37:57.000Z,
  *                      transaction_type: 1,
  *                      other_fullname: 'Dang Duy Khang'
-*                  },{
+ *                   },{
  *                      transaction_id: 82,
  *                      src_account_number: '28069884',
  *                      des_account_number: '71873611',
@@ -687,11 +922,14 @@ router.get('/bank_account' ,authUser, authRole(role.EMPLOYEE),  async function(r
  *                      transaction_created_at: 2023-01-01T11:22:00.000Z,
  *                      transaction_type: 1,
  *                      other_fullname: 'Lam Bao Ngoc'
- *                  }]
- *                paid_debt_list: []
- *                recevied_debt_list: []
- *                charge_by_SLB: []
- *                received_from_others: []
+ *                   }]
+ *                   paid_debt_list: []
+ *                   received_debt_list: []
+ *                   charge_by_SLB: []
+ *                   received_from_others: []
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
  *       "209":
  *         description: Wrong information of customer.
  *         content:
@@ -704,12 +942,18 @@ router.get('/bank_account' ,authUser, authRole(role.EMPLOYEE),  async function(r
  *           application/json:
  *             example:
  *               message: Unauthorized user!
- *       "500":
- *         description: Sever Interal Error
+ *       "403":
+ *         description: User must be employee
  *         content:
  *           application/json:
  *             example:
- *               message: Sever Interal Error
+ *               message: Not allowed user!
+ *       "500":
+ *         description: Server Internal Error
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Server Internal Error
  */
 router.get('/customer/transactions/:accessInfo', authUser, authRole(role.EMPLOYEE), async function(req, res){
     const paraData = req.params.accessInfo

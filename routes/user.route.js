@@ -1333,13 +1333,13 @@ router.put('/notifications/:notificationId', authUser, authRole(role.CUSTOMER), 
  *           application/json:
  *             schema:
  *               type: object
- *               description:
+ *               properties:
  *                 accountNumber:
  *                   type: string
  *                   description: The account number from partner
  *                 user:
  *                   type: object
- *                   description:
+ *                   properties:
  *                     id:
  *                       type: integer
  *                       description: The id of user from partner
