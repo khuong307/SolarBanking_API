@@ -15,10 +15,13 @@
     },
     "password": {
       "type": "string"
+    },
+    "confirmPassword": {
+      "type": "string"
     }
   },
   "required": [
-    "full_name", "email", "phone", "username", "password"
+    "full_name", "email", "phone", "username"
   ],
   "additionalProperties": true
 }
