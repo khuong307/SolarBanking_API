@@ -97,6 +97,13 @@ router.post("/",validate(debtCreateSchema),authRole(role.CUSTOMER),async functio
         const debt_amount = +req.body.debt_amount || 0;
         const debt_message= req.body.debt_message || '';
         if (user_id > 0){
+            const debtInfoBanking = await bankingAccountModel.checkExistBy(debt_account_number,"SLB");
+            if (!debtInfoBanking){
+                return res.status(500).json({
+                    isSuccess: false,
+                    message: 'Debtor\'s account does not exist'
+                })
+            }
             const userReminder = await userModel.genericMethods.findById(user_id);
             const accountReminder = await bankingAccountModel.findByUserIdAndAccountType(user_id, 1);
             let newDebt = {
@@ -141,7 +148,7 @@ router.post("/",validate(debtCreateSchema),authRole(role.CUSTOMER),async functio
                 message: 'Create new debt successful!'
             })
         }
-        return res.status(400).json({
+        return res.status(500).json({
             isSuccess: false,
             message: 'You do not have access'
         })
