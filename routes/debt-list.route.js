@@ -41,8 +41,6 @@ router.get("/:userId/list",authRole(role.CUSTOMER),async function(req,res){
             const listOtherMade = await debtListModel.listOtherMade(userAccountNumber);
             const self_debt_list = await filterDebtByType(listSelfMade,1);
             const other_debt_list = await filterDebtByType(listOtherMade,2);
-            console.log(self_debt_list)
-            console.log(other_debt_list)
             res.status(200).json({
                 isSuccess: true,
                 message: "This is all debts of you",
