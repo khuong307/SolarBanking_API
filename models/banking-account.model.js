@@ -16,6 +16,7 @@ export default {
         }).select();
     },
     async getInfoRecipientBy(account_number){
+        console.log(account_number)
         const res = await db('banking_account').where('account_number',account_number)
             .join('user','banking_account.user_id','=','user.user_id')
             .select('banking_account.user_id',
