@@ -305,7 +305,10 @@ router.get('/:userId/savingAccounts', validateParams, authUser, authRole(role.CU
 router.get('/:userId/spendAccounts', validateParams, authUser, authRole(role.CUSTOMER), async function(req, res) {
     const userId = +req.params.userId;
     const SPENDING_ACCOUNT_TYPE = 1;
-    const accounts = await bankingAccountModel.findByUserIdAndAccountType(userId, SPENDING_ACCOUNT_TYPE);
+    let accounts = await bankingAccountModel.findByUserIdAndAccountType(userId, SPENDING_ACCOUNT_TYPE);
+
+    if (accounts.length === 0)
+        accounts = await bankingAccountModel.findByUserIdAndAccountType(userId, -1);
 
     return res.json(accounts);
 });
@@ -1417,6 +1420,70 @@ router.get('/internal/info', authUser, async function(req, res) {
         });
 });
 
+/**
+ * @swagger
+ * /users/{userId}/spendingAccounts/lock:
+ *   post:
+ *     summary: Lock spending account
+ *     tags: [User]
+ *     parameters:
+ *     - name: userId
+ *       in: path
+ *       description: User id to lock account.
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
+ *     responses:
+ *       "200":
+ *         description: Successful operation.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The status lock
+ *                 message:
+ *                   type: string
+ *                   description: The message lock
+ *             examples:
+ *               Lock successfully:
+ *                 value:
+ *                    isSuccess: true
+ *                    message: Lock account successfully!
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "400":
+ *         description: Failed operation.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Lock failed:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Can not lock account this user!
+ *               Invalid parameter:
+ *                 value:
+ *                   error: The id parameter must be a positive integer
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ */
 router.post('/:userId/spendingAccounts/lock', validateParams, authUser, async function(req, res) {
     const userId = +req.params.userId;
     const ret = await bankingAccountModel.lockBankingAccount(userId);
@@ -1432,6 +1499,70 @@ router.post('/:userId/spendingAccounts/lock', validateParams, authUser, async fu
     });
 });
 
+/**
+ * @swagger
+ * /users/{userId}/spendingAccounts/unlock:
+ *   post:
+ *     summary: Unlock spending account
+ *     tags: [User]
+ *     parameters:
+ *     - name: userId
+ *       in: path
+ *       description: User id to unlock account.
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
+ *     responses:
+ *       "200":
+ *         description: Successful operation.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The status unlock
+ *                 message:
+ *                   type: string
+ *                   description: The message unlock
+ *             examples:
+ *               Unlock successfully:
+ *                 value:
+ *                    isSuccess: true
+ *                    message: Unlock account successfully!
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "400":
+ *         description: Failed operation.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Unlock failed:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: Can not lock account this user!
+ *               Invalid parameter:
+ *                 value:
+ *                   error: The id parameter must be a positive integer
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ */
 router.post('/:userId/spendingAccounts/unlock', validateParams, authUser, async function(req, res) {
     const userId = +req.params.userId;
     const ret = await bankingAccountModel.unlockBankingAccount(userId);
