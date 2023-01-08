@@ -143,7 +143,9 @@ router.get('/customer/:accessInfo', authUser, async function (req, res) {
             email: userInfo.email,
             phone: userInfo.phone,
             account_number: bankAccountInfo.account_number,
-            balance: bankAccountInfo.balance
+            balance: bankAccountInfo.balance,
+            isLock: bankAccountInfo.is_spend_account < 0? true : false,
+            customer_id: bankAccountInfo.user_id
         }
         return res.status(200).json({
             isFound: true,

@@ -119,7 +119,7 @@ router.post('/employee', validate(employeeSchema), async function (req, res) {
         }
         const hashPassword = bcrypt.hashSync(password, 10)
         const newUser = {full_name, email, phone}
-        const newUserAccount = {username, password: hashPassword, user_type_id: 1, refresh_token: generateRefreshToken()}
+        const newUserAccount = {username, password: hashPassword, user_type_id: 2, refresh_token: generateRefreshToken()}
 
         newUserAccount.user_id = await userModel.genericMethods.add(newUser)
         await userAccountModel.genericMethods.add(newUserAccount)
@@ -139,10 +139,16 @@ router.post('/employee', validate(employeeSchema), async function (req, res) {
 });
 
 // router.put('/employee/:userId', authUser, authorization(role.ADMIN), validate(userSchema), async function(req, res) {
-router.put('/employee/:userId', validateParams, validate(userSchema), async function(req, res) {
+router.patch('/employee/:userId', validateParams, validate(employeeSchema), async function(req, res) {
     try {
         const userId = +req.params.userId; 
         const updatedInfo = req.body;
+        const updatedUserInfo = {
+            full_name: updatedInfo.full_name,
+            email: updatedInfo.email,
+            phone: updatedInfo.phone
+        }
+        
         const user = await userModel.genericMethods.findById(userId);
         const userAccount = await userAccountModel.findByUserId(userId);
         if (user == null || userAccount == null || userAccount.user_type_id != 2) {
@@ -157,15 +163,51 @@ router.put('/employee/:userId', validateParams, validate(userSchema), async func
                 message: 'The request body must not be empty'
             });
         }
-    
-        await userModel.genericMethods.update(userId, updatedInfo);
-    
-        return res.status(400).json({
+
+        await userModel.genericMethods.update(userId, updatedUserInfo);
+        if (updatedInfo.password != "" && updatedInfo.password == updatedInfo.confirmPassword) {
+            const hashPassword = bcrypt.hashSync(updatedInfo.password, 10)
+            const newUserAccount = {username: updatedInfo.username, password: hashPassword, user_type_id: 2, refresh_token: generateRefreshToken()}
+            await userAccountModel.genericMethods.update(updatedInfo.username, newUserAccount);
+        }
+        
+        return res.status(200).json({
             isSuccess: true,
-            message: "Update employee infomation successfully",
-            user: user
+            message: "Update employee infomation successfully"
         });
-    } catch (e) {
+    } catch (err) {
+        res.status(500).json({
+            isSuccess: false,
+            message:"Cannot update employee infomation"
+        })
+    }
+});
+
+// router.get('/employee/:userId', authUser, authorization(role.ADMIN), validate(userSchema), async function(req, res) {
+router.get('/employee/:userId', async function(req, res) {
+    try {
+        const userId = +req.params.userId; 
+        const user = await userModel.genericMethods.findById(userId);
+        const userAccount = await userAccountModel.findByUserId(userId);
+        if (user == null || userAccount == null || userAccount.user_type_id != 2) {
+            return res.status(400).json({
+                isSuccess: false,
+                message: 'Cannot find this employee'
+            });
+        }
+        const newUser = {
+            user_id: user.user_id,
+            full_name: user.full_name,
+            email: user.email,
+            phone: user.phone,
+            username: userAccount.username
+        }
+    
+        return res.status(200).json({
+            isSuccess: true,
+            user: newUser
+        });
+    } catch (err) {
         console.log(err)
         res.status(500).json({
             isSuccess: false,

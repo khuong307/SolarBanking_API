@@ -94,11 +94,12 @@ import generateOtp from "../utils/otp.js"
 import generateEmail from "../utils/mail.js"
 import datetime_func from "../utils/datetime_func.js";
 import { BANK_CODE, EXPIRED_RSA_TIME, TRANSFER_FEE } from "../utils/bank_constanst.js";
-import { generateDesTransfer, generateOtpContentTransfer, generateSrcTransfer } from "../utils/bank.js";
+import { generateDesTransfer, generateOtpContentTransfer, generateSrcTransfer, isBankingAccountLocked } from "../utils/bank.js";
 import jwt from "../utils/jwt.js";
 import axios from "axios";
 import db from "../utils/db.js";
 import otherBank from "../utils/other_bank.js"
+import { authUser } from "../middlewares/auth.mdw.js"
 
 
 const router = express.Router()
@@ -116,6 +117,16 @@ const router = express.Router()
  *       required: true
  *       schema:
  *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
  *     responses:
  *       "200":
  *         description: Successfully get all bank accounts.
@@ -130,8 +141,31 @@ const router = express.Router()
  *                 bankAccounts:
  *                   type: array
  *                   description: list of bank accounts of user
- *                   items:
- *                     $ref: '#/components/schemas/BankingAccount'
+ *               items:
+ *                 $ref: '#/components/schemas/BankingAccount'
+ *             examples:
+ *               get all bank accounts:
+ *                 value:
+ *                   isSuccess: true
+ *                   bankAccounts: [
+ *                     {
+ *                        account_number: "11111",
+ *                        balance: 760000000,
+ *                        user_id : 57,
+ *                        bank_code: "SLB",
+ *                        is_spend_account: 1
+ *                     },
+ *                     {
+ *                        account_number: "11111",
+ *                        balance: 5000000,
+ *                        user_id : 57,
+ *                        bank_code: "ACB",
+ *                        is_spend_account: 0
+ *                     }
+ *                   ]
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
  *       "400":
  *         description: Unsuccessfully get all bank accounts.
  *         content:
@@ -139,6 +173,12 @@ const router = express.Router()
  *             example:
  *               isSuccess: false
  *               message: "There is no bank account for this user"
+ *       "401":
+ *          description: Unauthorized user
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: Unauthorized user!
  *       "500":
  *         description: Unsuccessfully get all bank accounts.
  *         content:
@@ -147,7 +187,7 @@ const router = express.Router()
  *               isSuccess: false
  *               message: "Can not get bank accounts"
  */
-router.get("/:userId/bankaccounts", validateParams, async (req, res) => {
+router.get("/:userId/bankaccounts", validateParams, authUser, async (req, res) => {
     const userId = +req.params.userId
     try {
         const bankAccounts = await bankingAccountModel.findByUserIdAndAccountType(userId, 1)
@@ -184,6 +224,16 @@ router.get("/:userId/bankaccounts", validateParams, async (req, res) => {
  *       required: true
  *       schema:
  *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
  *     responses:
  *       "200":
  *         description: Successfully get bank account.
@@ -197,16 +247,21 @@ router.get("/:userId/bankaccounts", validateParams, async (req, res) => {
  *                   description: The status
  *                 bankAccount:
  *                   type: object
- *                   description: bank account of this user
- *             example:
- *                 isSuccess: true
- *                 bankAccount: {
- *                    account_number: "01325183",
- *                    balance: 121391300,
- *                    user_id: 40,
- *                    bank_code: "SLB",
- *                    is_spend_account: 1
- *                 }
+ *                   description: bank account of user
+ *             examples:
+ *               get bank account:
+ *                 value:
+ *                   isSuccess: true
+ *                   bankAccounts: {
+ *                        account_number: "11111",
+ *                        balance: 760000000,
+ *                        user_id : 57,
+ *                        bank_code: "SLB",
+ *                        is_spend_account: 1
+ *                   }
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
  *       "400":
  *         description: Unsuccessfully get bank account.
  *         content:
@@ -214,6 +269,12 @@ router.get("/:userId/bankaccounts", validateParams, async (req, res) => {
  *             example:
  *               isSuccess: false
  *               message: "There is no bank account for this user"
+ *       "401":
+ *          description: Unauthorized user
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: Unauthorized user!
  *       "500":
  *         description: Unsuccessfully get bank account.
  *         content:
@@ -222,7 +283,7 @@ router.get("/:userId/bankaccounts", validateParams, async (req, res) => {
  *               isSuccess: false
  *               message: "Can not get bank account"
  */
-router.get("/:userId/bankaccount", validateParams, async (req, res) => {
+router.get("/:userId/bankaccount", validateParams, authUser, async (req, res) => {
     const userId = +req.params.userId
     try {
         const bankAccount = await bankingAccountModel.findByUserIdAndBankCode(userId)
@@ -260,6 +321,16 @@ router.get("/:userId/bankaccount", validateParams, async (req, res) => {
  *       required: true
  *       schema:
  *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
  *     requestBody:
  *       description: Info Transaction
  *       content:
@@ -309,26 +380,35 @@ router.get("/:userId/bankaccount", validateParams, async (req, res) => {
  *                 infoTransaction:
  *                   type: object
  *                   description: information of transaction includes recipient information
- *             example:
- *                 isSuccess: true
- *                 message: "Confirm transaction is valid"
- *                 infoTransaction: {
- *                    src_account_number: "11111",
- *                    des_account_number: "01325183",
- *                    bank_code: "SLB",
- *                    transaction_amount: 500000,
- *                    transaction_message: "Transfer Money",
- *                    pay_transaction_fee: "SRC",
- *                    full_name: "Lam Thanh Hong",
- *                    email: "hong8877@gmail.com",
- *                    phone: "1902445452",
- *                    transaction_type: 1
- *                 }
+ *             examples:
+ *               Valid Information Transaction:
+ *                 value:
+ *                   isSuccess: true
+ *                   message: "Confirm transaction is valid"
+ *                   infoTransaction: {
+ *                     src_account_number: "11111",
+ *                     des_account_number: "01325183",
+ *                     bank_code: "SLB",
+ *                     transaction_amount: 500000,
+ *                     transaction_message: "Transfer Money",
+ *                     pay_transaction_fee: "SRC",
+ *                     full_name: "Lam Thanh Hong",
+ *                     email: "hong8877@gmail.com",
+ *                     phone: "1902445452",
+ *                     transaction_type: 1
+ *                   }
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
  *       "400":
  *         description: Valid Intra Transaction failed.
  *         content:
  *           application/json:
  *             examples:
+ *               Locked Bank Account:
+ *                 value:
+ *                   isSuccess: false
+ *                   messsage: "This account number is locked"
  *               Money transaction invalid:
  *                 value:
  *                   isSuccess: false
@@ -341,6 +421,12 @@ router.get("/:userId/bankaccount", validateParams, async (req, res) => {
  *                 value:
  *                   isSuccess: false
  *                   message: "destination account number is invalid"
+ *       "401":
+ *          description: Unauthorized user
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: Unauthorized user!
  *       "500":
  *         description: Invalid Information Intra Transaction.
  *         content:
@@ -351,10 +437,28 @@ router.get("/:userId/bankaccount", validateParams, async (req, res) => {
  */
 
 // First step : Check Info Inter Transaction Before Real Transfer
-router.post("/:userId/intratransaction", validateParams, async (req, res) => {
+router.post("/:userId/intratransaction", validateParams, authUser, async (req, res) => {
     const infoTransaction = req.body
     const userId = +req.params.userId
     try {
+        // Check src_account_number is not locked
+        let isLockedAccount = await isBankingAccountLocked(infoTransaction.src_account_number);
+        if (isLockedAccount) {
+            return res.status(400).json({
+                isSuccess: false,
+                message: "This account number is locked"
+            })
+        }
+
+        // Check des_account_number is not locked
+        isLockedAccount = await isBankingAccountLocked(infoTransaction.des_account_number);
+        if (isLockedAccount) {
+            return res.status(400).json({
+                isSuccess: false,
+                message: "This account number is locked"
+            })
+        }
+
         // Check src_account_number is existed (belong to userId)
         const result_src = await bankingAccountModel.findByUserIdAndAccountNumber(userId, infoTransaction.src_account_number)
         if (result_src.length === 0) {
@@ -416,6 +520,16 @@ router.post("/:userId/intratransaction", validateParams, async (req, res) => {
  *       required: true
  *       schema:
  *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
  *     requestBody:
  *       description: Info Transaction
  *       content:
@@ -462,16 +576,33 @@ router.post("/:userId/intratransaction", validateParams, async (req, res) => {
  *                 transactionId:
  *                   type: int
  *                   description: The id of transaction
- *             example:
- *               isSuccess: true
- *               transactionId: 1
+ *             examples:
+ *               Create status transaction successfully ( not success completely):
+ *                 value:
+ *                   isSuccess: true
+ *                   transactionId: 1
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
  *       "400":
  *         description: Valid Intra Transaction failed.
  *         content:
  *           application/json:
- *             example:
- *               isSuccess: false
- *               message: "Money transaction is invalid"
+ *             examples:
+ *               Locked Bank Account:
+ *                 value:
+ *                   isSuccess: false
+ *                   messsage: "This account number is locked"
+ *               Money transaction invalid:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: "Money transaction is invalid"
+ *       "401":
+ *          description: Unauthorized user
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: Unauthorized user!
  *       "500":
  *         description: Invalid Information Intra Transaction.
  *         content:
@@ -483,10 +614,19 @@ router.post("/:userId/intratransaction", validateParams, async (req, res) => {
 
 // ---------- DUNG CHO CA LIEN NGAN HANG VA NOI BO --------------------- //
 // Second step: Confirm transaction after all info is correct 
-router.post("/:userId/transaction/confirm", validateParams, async (req, res) => {
+router.post("/:userId/transaction/confirm", validateParams, authUser, async (req, res) => {
     const userId = +req.params.userId
     const infoTransaction = req.body
     try {
+        // Check src_account_number is not locked
+        let isLockedAccount = await isBankingAccountLocked(infoTransaction.src_account_number);
+        if (isLockedAccount) {
+            return res.status(400).json({
+                isSuccess: false,
+                message: "This account number is locked"
+            })
+        }
+
         // Check amount money transfer is valid before initialize otp ( prevent hacker)
         const srcBankAccount = await bankingAccountModel.genericMethods.findById(infoTransaction.src_account_number)
         // Check amount of money is valid corresponding to account_number
@@ -502,7 +642,7 @@ router.post("/:userId/transaction/confirm", validateParams, async (req, res) => 
         // insert to table transaction but is_success will set false
         const newTransaction = {
             ...infoTransaction, otp_code: otp, is_success: false,
-            transaction_type:1,
+            transaction_type: 1,
             transaction_created_at: moment(Date.now()).format("YYYY-MM-DD HH:mm:ss")
         }
         const result = await transactionModel.genericMethods.add(newTransaction)
@@ -542,6 +682,16 @@ router.post("/:userId/transaction/confirm", validateParams, async (req, res) => 
  *       required: true
  *       schema:
  *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
  *     requestBody:
  *       description: Information OTP
  *       content:
@@ -572,18 +722,29 @@ router.post("/:userId/transaction/confirm", validateParams, async (req, res) => 
  *                 infoTransaction:
  *                   type: object
  *                   description: The information of a transaction
- *             example:
- *               isSuccess: true
- *               infoTransaction: {
- *                 isSavedRecipientTable: true,
- *                 full_name: "Lam Thanh Hong",
- *                 des_account_number: "01325183",
- *                 bank: "SOLAR BANKING",
- *                 transaction_amount: 500000,
- *                 transaction_message: "Transfer Money",
- *                 transaction_fee: 15000,
- *                 total: 515000
- *               }
+ *             examples:
+ *               Create transaction successfully ( completed):
+ *                 value:
+ *                   isSuccess: true
+ *                   infoTransaction: {
+ *                     isSavedRecipientTable: true,
+ *                     full_name: "Lam Thanh Hong",
+ *                     des_account_number: "01325183",
+ *                     bank: "SOLAR BANKING",
+ *                     transaction_amount: 500000,
+ *                     transaction_message: "Transfer Money",
+ *                     transaction_fee: 15000,
+ *                     total: 515000
+ *                   }
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "401":
+ *          description: Unauthorized user
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: Unauthorized user!
  *       "403":
  *         description: Transaction failed.
  *         content:
@@ -611,7 +772,7 @@ router.post("/:userId/transaction/confirm", validateParams, async (req, res) => 
  */
 
 // Final Step: Valid OTP and Transaction completed
-router.post("/intratransaction/:id", async (req, res) => {
+router.post("/intratransaction/:id", authUser, async (req, res) => {
     const transactionId = req.params.id
     const otpInfo = req.body
     try {
@@ -746,6 +907,16 @@ router.post("/intratransaction/:id", async (req, res) => {
  *       required: true
  *       schema:
  *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
  *     responses:
  *       "200":
  *         description: Successfully Resend OTP.
@@ -760,9 +931,20 @@ router.post("/intratransaction/:id", async (req, res) => {
  *                 message:
  *                   type: string
  *                   description: The information of OTP Resend
- *             example:
- *               isSuccess: true
- *               message: OTP has been renew
+ *             examples:
+ *               Resend OTP successfully:
+ *                 value:
+ *                   isSuccess: true
+ *                   message: OTP has been renew
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "401":
+ *          description: Unauthorized user
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: Unauthorized user!
  *       "403":
  *         description: Resend OTP failed.
  *         content:
@@ -786,7 +968,7 @@ router.post("/intratransaction/:id", async (req, res) => {
  */
 
 // Resend OTP
-router.post("/transaction/:id/otp", async (req, res) => {
+router.post("/transaction/:id/otp", authUser, async (req, res) => {
     const transactionId = req.params.id
     try {
         // Check transaction exist in database ( based on transactionId and not success)
@@ -850,6 +1032,16 @@ router.post("/transaction/:id/otp", async (req, res) => {
  *       required: true
  *       schema:
  *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
  *     requestBody:
  *       description: Info Transaction
  *       content:
@@ -899,21 +1091,26 @@ router.post("/transaction/:id/otp", async (req, res) => {
  *                 infoTransaction:
  *                   type: object
  *                   description: information of transaction includes recipient information
- *             example:
- *                 isSuccess: true
- *                 message: "Confirm transaction is valid"
- *                 infoTransaction: {
- *                    src_account_number: "11111",
- *                    des_account_number: "23875338674",
- *                    bank_code: "TXB",
- *                    transaction_amount: 500000,
- *                    transaction_message: "Transfer Money",
- *                    pay_transaction_fee: "SRC",
- *                    full_name: "Andrew pham",
- *                    email: "",
- *                    phone: null,
- *                    transaction_type: 2
- *                 }
+ *             examples:
+ *               Valid Information Transaction:
+ *                 value:
+ *                   isSuccess: true
+ *                   message: "Confirm transaction is valid"
+ *                   infoTransaction: {
+ *                     src_account_number: "11111",
+ *                     des_account_number: "23875338674",
+ *                     bank_code: "TXB",
+ *                     transaction_amount: 500000,
+ *                     transaction_message: "Transfer Money",
+ *                     pay_transaction_fee: "SRC",
+ *                     full_name: "Andrew pham",
+ *                     email: "",
+ *                     phone: null,
+ *                     transaction_type: 2
+ *                    }
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
  *       "400":
  *         description: Valid Inter Transaction failed.
  *         content:
@@ -923,6 +1120,10 @@ router.post("/transaction/:id/otp", async (req, res) => {
  *                 value:
  *                   isSuccess: false
  *                   message: Bank doesn't belongs to system connectivity banks
+ *               Locked Bank Account:
+ *                 value:
+ *                   isSuccess: false
+ *                   messsage: "This account number is locked"
  *               Money transaction invalid:
  *                 value:
  *                   isSuccess: false
@@ -935,6 +1136,12 @@ router.post("/transaction/:id/otp", async (req, res) => {
  *                 value:
  *                   isSuccess: false
  *                   message: destination account number is invalid
+ *       "401":
+ *          description: Unauthorized user
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: Unauthorized user!
  *       "500":
  *         description: Invalid Information Inter Transaction.
  *         content:
@@ -945,12 +1152,21 @@ router.post("/transaction/:id/otp", async (req, res) => {
  */
 
 // First step: Get des_full_info from other banks based on des_account_number
-router.post("/:userId/intertransaction", validateParams, async (req, res) => {
+router.post("/:userId/intertransaction", validateParams, authUser, async (req, res) => {
     const infoTransaction = req.body
     const userId = +req.params.userId
     // Using trx as a transaction object:
     const trx = await db.transaction();
     try {
+        // Check src_account_number is not locked
+        let isLockedAccount = await isBankingAccountLocked(infoTransaction.src_account_number);
+        if (isLockedAccount) {
+            return res.status(400).json({
+                isSuccess: false,
+                message: "This account number is locked"
+            })
+        }
+
         // Check src_account_number is existed (belong to userId)
         const result_src = await bankingAccountModel.findByUserIdAndAccountNumber(userId, infoTransaction.src_account_number)
         if (result_src.length === 0) {
@@ -1104,6 +1320,10 @@ router.post("/:userId/intertransaction", validateParams, async (req, res) => {
  *                 value:
  *                   isSuccess: false
  *                   message: Bank doesn't belongs to system connectivity banks
+ *               Locked Bank Account:
+ *                 value:
+ *                   isSuccess: false
+ *                   messsage: "This account number is locked"
  *               Decode Token Failed:
  *                 value:
  *                   isSuccess: false
@@ -1174,6 +1394,15 @@ router.post("/desaccount", async (req, res) => {
             })
         }
 
+         // Check des_account_number is not locked
+         let isLockedAccount = await isBankingAccountLocked(account_number);
+         if (isLockedAccount) {
+             return res.status(400).json({
+                 isSuccess: false,
+                 message: "This account number is locked"
+             })
+         }
+
         const infoRecipient = await bankingAccountModel.getInfoUserBy(account_number)
         if (infoRecipient === null) {
             return res.status(400).json({
@@ -1211,6 +1440,16 @@ router.post("/desaccount", async (req, res) => {
  *       required: true
  *       schema:
  *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
  *     requestBody:
  *       description: Information OTP
  *       content:
@@ -1241,25 +1480,36 @@ router.post("/desaccount", async (req, res) => {
  *                 infoTransaction:
  *                   type: object
  *                   description: The information of a transaction
- *             example:
- *               isSuccess: true
- *               infoTransaction: {
- *                 isSavedRecipientTable: true,
- *                 full_name: "Lam Thanh Hong",
- *                 des_account_number: "01325183",
- *                 bank: "Taixiu Bank",
- *                 transaction_amount: 500000,
- *                 transaction_message: "Transfer Money",
- *                 transaction_fee: 15000,
- *                 total: 515000
- *               }
+ *             examples:
+ *               Transaction Complete:
+ *                 value:
+ *                   isSuccess: true
+ *                   infoTransaction: {
+ *                     isSavedRecipientTable: true,
+ *                     full_name: "Lam Thanh Hong",
+ *                     des_account_number: "01325183",
+ *                     bank: "Taixiu Bank",
+ *                     transaction_amount: 500000,
+ *                     transaction_message: "Transfer Money",
+ *                     transaction_fee: 15000,
+ *                     total: 515000
+ *                   }
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
  *       "401":
  *         description: Verified Token Receive Failed.
  *         content:
  *           application/json:
- *             example:
- *               isSuccess: false
- *               message: "Can not verified transaction of other bank"
+ *             examples:
+ *               Verified Token Failed:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: "Can not verified transaction of other bank"
+ *               Unauthorized User:
+ *                 value:
+ *                   message: Unauthorized user!
+ *                   
  *       "403":
  *         description: Transaction failed.
  *         content:
@@ -1287,7 +1537,7 @@ router.post("/desaccount", async (req, res) => {
  */
 
 // Final Step: Valid OTP and Transaction completed
-router.post("/intertransaction/:id", async (req, res) => {
+router.post("/intertransaction/:id", authUser, async (req, res) => {
     const transactionId = req.params.id
     const otpInfo = req.body
     console.log(otpInfo)
@@ -1361,17 +1611,17 @@ router.post("/intertransaction/:id", async (req, res) => {
         let sign = signer.sign(process.env.PRIVATE_KEY, "hex")
 
         const dataSendToOther = {
-            accountNumber:dataTransaction.src_account_number,
-            transactionInfo:{
-                accountDesNumber:dataTransaction.des_account_number,
-                amount:dataTransaction.transaction_amount,
-                description:dataTransaction.transaction_message,
-                payTransactionFee:dataTransaction.pay_transaction_fee
+            accountNumber: dataTransaction.src_account_number,
+            transactionInfo: {
+                accountDesNumber: dataTransaction.des_account_number,
+                amount: dataTransaction.transaction_amount,
+                description: dataTransaction.transaction_message,
+                payTransactionFee: dataTransaction.pay_transaction_fee
             },
-            msgToken:msgToken,
-            timestamp:timestamp,
-            signature:sign,
-            slug:BANK_CODE
+            msgToken: msgToken,
+            timestamp: timestamp,
+            signature: sign,
+            slug: BANK_CODE
         }
 
         console.log(dataSendToOther)
@@ -1499,6 +1749,10 @@ router.post("/intertransaction/:id", async (req, res) => {
  *                 value:
  *                   isSuccess: false
  *                   message: Bank doesn't belongs to system connectivity banks
+ *               Locked Bank Account:
+ *                 value:
+ *                   isSuccess: false
+ *                   messsage: "This account number is locked"
  *               Decode Token Failed:
  *                 value:
  *                   isSuccess: false
@@ -1597,6 +1851,15 @@ router.post("/intertransaction", async (req, res) => {
             })
         }
 
+         // Check des_account_number is not locked
+         let isLockedAccount = await isBankingAccountLocked(infoReceive?.des_account_number);
+         if (isLockedAccount) {
+             return res.status(400).json({
+                 isSuccess: false,
+                 message: "This account number is locked"
+             })
+         }
+
         // If Paid By Receiver => Charge fee for receiver + bonus money
         if (infoReceive.pay_transaction_fee === "DES") {
             // Check Balance after transfer is not zero or negative value
@@ -1664,12 +1927,12 @@ router.post("/intertransaction", async (req, res) => {
         const encryptToken = await jwt.generateAsyncToken(desInfo, process.env.PRIVATE_KEY, EXPIRED_RSA_TIME)
         const encryptedData = { encryptToken, bank_code: "SLB" }
 
-         // Generate email send to recipient  ( email of src will be in charge of other bank)
-         const subject = "Transfer Money"
-         const desMessage = generateDesTransfer(desInfo.full_name, recipientAccount.account_number
-             , infoReceive.transaction_amount, recipientAccount.balance, infoReceive.transaction_message,
-             desInfo.email, infoReceive.transaction_created_at)
-         generateEmail(desInfo.email, subject, desMessage)
+        // Generate email send to recipient  ( email of src will be in charge of other bank)
+        const subject = "Transfer Money"
+        const desMessage = generateDesTransfer(desInfo.full_name, recipientAccount.account_number
+            , infoReceive.transaction_amount, recipientAccount.balance, infoReceive.transaction_message,
+            desInfo.email, infoReceive.transaction_created_at)
+        generateEmail(desInfo.email, subject, desMessage)
 
         await trx.commit()
         console.log(result)
@@ -1696,6 +1959,17 @@ router.post("/intertransaction", async (req, res) => {
  *   post:
  *     summary: Save recipient to recipient list of user
  *     tags: [Customer Transaction]
+ *     parameters:
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
  *     requestBody:
  *       description: Information Recipient
  *       content:
@@ -1733,10 +2007,21 @@ router.post("/intertransaction", async (req, res) => {
  *                 result:
  *                   type: int
  *                   description: id of new recipient in recipient list
- *             example:
- *                 isSuccess: true
- *                 message: Save recipient successfully!
- *                 result: 1
+ *             examples:
+ *               Save recipient successfully:
+ *                 value:
+ *                   isSuccess: true
+ *                   message: Save recipient successfully!
+ *                   result: 1
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "401":
+ *          description: Unauthorized user
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: Unauthorized user!
  *       "500":
  *         description: Invalid Save Recipient.
  *         content:
@@ -1747,7 +2032,7 @@ router.post("/intertransaction", async (req, res) => {
  */
 
 // Save recipient to recipient list
-router.post("/save", async (req, res) => {
+router.post("/save", authUser, async (req, res) => {
     const infoRecipient = req.body
     try {
         let result = -1
