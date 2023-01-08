@@ -16,13 +16,14 @@ export default {
         const obj =  await db(TABLE_NAME).where('debt_id',debtId).select();
         return obj.length > 0 ? obj[0] : null;
     },
-    async updateStatusDebtPayment(debtId,status){
+    async updateStatusDebtPayment(debtId,status,message){
         const res = await db(TABLE_NAME)
             .where({
                 debt_id: debtId
             })
             .update({
-                debt_status: status
+                debt_status: status,
+                debt_cancel_message: message
             });
         return res
     },
