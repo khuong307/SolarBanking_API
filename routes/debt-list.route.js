@@ -408,6 +408,74 @@ router.post("/",validate(debtCreateSchema),authUser,authRole(role.CUSTOMER),asyn
     }
 })
 
+/**
+ * @swagger
+ * /debtList/{userId}/checkBalance:
+ *   get:
+ *     summary: Check if your account balance is enough for payment
+ *     tags: [Debt List]
+ *     parameters:
+ *       - name: userId
+ *         in: path
+ *         description: The id of user to check balance
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: amount
+ *         in: query
+ *         description: amount to compare with user balance
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       "200":
+ *         description: Successful operation
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isEnough:
+ *                   type: boolean
+ *                   description: successful confirmation
+ *                 message:
+ *                   type: string
+ *                   description: response message
+ *             examples:
+ *               Insufficient Balance:
+ *                 value:
+ *                   - isEnough: false
+ *                     message: "Your balance is not enough to make the payment"
+ *               Enough Balance:
+ *                 value:
+ *                   - isEnough: true
+ *                     message: "Your balance is enough to make the payment"
+ *       "500":
+ *         description: Blocked account
+ *         content:
+ *           application/json:
+ *             example:
+ *               isEnough: false
+ *               message: "Your account is blocked!"
+ *       "403":
+ *         description: Undefined User
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Undefined User:
+ *                 value:
+ *                   isEnough: true
+ *                   message: "User is not exist"
+ *               Authorized Role:
+ *                 value:
+ *                   message: 'Not allowed user!'
+ *       "409":
+ *         description: Authorized Role
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: 'User not found!'
+ */
 router.get("/:userId/checkBalance",authRole(role.CUSTOMER),async function(req,res){
     try {
         const user_id = +req.params.userId;
@@ -800,6 +868,10 @@ router.post("/re-sendOtp",authUser,authRole(role.CUSTOMER),async function(req,re
  *                 value:
  *                   - isSuccess: false
  *                     message: "Validation failed. OTP code may be incorrect or the session was expired!"
+ *               Not Enough Amount:
+ *                 value:
+ *                   - isSuccess: false
+ *                     message: "Your balance is not enough to make the payment"
  */
 router.post("/internal/verified-payment",authUser,authRole(role.CUSTOMER),async function(req,res,next){
     try{
@@ -820,6 +892,16 @@ router.post("/internal/verified-payment",authUser,authRole(role.CUSTOMER),async 
             const debt_amount = debtDetail.debt_amount;
             const transId = debtDetail.paid_transaction_id;
             const transDetail = await transactionsModel.genericMethods.findById(transId);
+
+            const SPENDING_ACCOUNT_TYPE = 1;
+            const _userBanking = await bankingAccountModel.findByUserIdAndAccountType(senderId, SPENDING_ACCOUNT_TYPE);
+            const userBalance = _userBanking.length !== 0 ? _userBanking[0].balance : '';
+            if (debt_amount > userBalance){
+                return res.status(500).json({
+                    isSuccess: false,
+                    message: "Your balance is not enough to make the payment"
+                })
+            }
             //Step 1: Verified OTP code
             console.log(transDetail.otp_code)
             console.log(moment().isBefore(transDetail.transaction_created_at))
