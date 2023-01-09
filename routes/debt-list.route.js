@@ -853,12 +853,13 @@ router.put("/cancelDebt/:debtId",validate(debtCancelSchema),authRole(role.CUSTOM
                 const bankingInfoRecipient = await bankingAccountModel.getInfoRecipientBy(debtInfo.debt_account_number);
                 const recipientId = bankingInfoRecipient[0].user_id;
                 const transactionId = debtInfo.paid_transaction_id;
+                const bankingAccountSender = await bankingAccountModel.findByUserIdAndAccountType(_userId, 1);
                 //send notify for debtor
                 let newNotify = {
                     user_id: recipientId,
                     transaction_id: transactionId,
                     debt_id: _debtId,
-                    notification_message: `Debt code ${_debtId} has been cancelled by ${senderInfo.full_name} - ${debtInfo.debt_account_number}`,
+                    notification_message: `Debt code ${_debtId} has been cancelled by ${senderInfo.full_name} - ${bankingAccountSender[0].account_number} with message: ${messageCancel}`,
                     is_seen: 0,
                     notification_title: 'Debt Cancellation',
                     notification_created_at: new Date()
@@ -879,7 +880,7 @@ router.put("/cancelDebt/:debtId",validate(debtCancelSchema),authRole(role.CUSTOM
                     user_id: reminderId,
                     transaction_id: transactionId,
                     debt_id: _debtId,
-                    notification_message: messageCancel,
+                    notification_message: `Debt code ${_debtId} has been cancelled by ${senderInfo.full_name} - ${debtInfo.account_number} with message: ` + messageCancel,
                     is_seen: 0,
                     notification_title: 'Debt Cancellation',
                     notification_created_at: new Date()
