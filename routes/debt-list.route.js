@@ -91,7 +91,7 @@ const router = express.Router();
  *         content:
  *           application/json:
  *             schema:
- *               $ref: "#/components/schemas/BankingAccount"
+ *               $ref: "#/components/schemas/Debt List"
  *             examples:
  *               Get successfully:
  *                 value:
@@ -123,6 +123,18 @@ const router = express.Router();
  *           application/json:
  *             example:
  *               message: Unauthorized user!
+ *       "403":
+ *         description: Authorized Role
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: 'Not allowed user!'
+ *       "409":
+ *         description: Authorized Role
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: 'User not found!'
  */
 router.get("/:userId/list",validateParams,authRole(role.CUSTOMER),async function(req,res){
     try{
@@ -138,7 +150,7 @@ router.get("/:userId/list",validateParams,authRole(role.CUSTOMER),async function
             const listOtherMade = await debtListModel.listOtherMade(userAccountNumber);
             const self_debt_list = await filterDebtByType(listSelfMade,1);
             const other_debt_list = await filterDebtByType(listOtherMade,2);
-            res.status(200).json({
+            return res.status(200).json({
                 isSuccess: true,
                 message: "Successful operation",
                 self_debt_list,
@@ -146,14 +158,14 @@ router.get("/:userId/list",validateParams,authRole(role.CUSTOMER),async function
             })
         }
         else{
-            res.status(401).json({
+            return res.status(401).json({
                 isSuccess: false,
                 message: "Unauthorized user",
             })
         }
     }
     catch (err){
-        res.status(400).json({
+        return res.status(400).json({
             isSuccess: false,
             message: err.message
         })
@@ -162,7 +174,7 @@ router.get("/:userId/list",validateParams,authRole(role.CUSTOMER),async function
 
 /**
  * @swagger
- * /debtList/{userId}:
+ * /debtList/{debtId}:
  *   get:
  *     summary: Get detail of debt
  *     tags: [Debt List]
@@ -179,10 +191,12 @@ router.get("/:userId/list",validateParams,authRole(role.CUSTOMER),async function
  *         content:
  *           application/json:
  *             schema:
- *               $ref: "#/components/schemas/DebtList"
+ *               $ref: "#/components/schemas/Debt List"
  *             examples:
  *               Get successfully:
  *                 value:
+ *                   isSuccess: true
+ *                   message: "Successful operation"
  *                   debt_id: 1
  *                   user_id: 1
  *                   debt_account_number: "123456"
@@ -199,7 +213,7 @@ router.get("/:userId/list",validateParams,authRole(role.CUSTOMER),async function
  *               isSuccess: false
  *               message: Could not find this debt
  */
-router.get("/:debtId",authRole(role.CUSTOMER),async function(req,res,next){
+router.get("/:debtId",async function(req,res,next){
     try {
         const _debtId= +req.params.debtId || 0;
         const objDebt = await debtListModel.getDebtById(_debtId)
@@ -211,13 +225,13 @@ router.get("/:debtId",authRole(role.CUSTOMER),async function(req,res,next){
             })
         }
         else{
-            res.status(403).json({
+            return res.status(403).json({
                 isSuccess: false,
                 message: "Could not find this debt",
             })
         }
     }catch (err){
-        res.status(400).json({
+        return res.status(400).json({
             isSuccess: false,
             message: err.message
         })
@@ -229,6 +243,17 @@ router.get("/:debtId",authRole(role.CUSTOMER),async function(req,res,next){
  *   post:
  *     summary: Create new debt
  *     tags: [Debt List]
+ *     parameters:
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
  *     requestBody:
  *       description: Information Debt
  *       content:
@@ -250,7 +275,7 @@ router.get("/:debtId",authRole(role.CUSTOMER),async function(req,res,next){
  *                 description: notes for debt
  *           example:
  *             user_id: 1
- *             debt_account_number: "123456"
+ *             debt_account_number: "789456"
  *             debt_amount: 30000
  *             debt_message: "Create new debt"
  *     responses:
@@ -258,6 +283,15 @@ router.get("/:debtId",authRole(role.CUSTOMER),async function(req,res,next){
  *         description: Successful operation
  *         content:
  *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: successful confirmation
+ *                 message:
+ *                   type: string
+ *                   description: response message
  *             examples:
  *               Get successfully:
  *                 value:
@@ -277,7 +311,7 @@ router.get("/:debtId",authRole(role.CUSTOMER),async function(req,res,next){
  *                       missingProperty: "debt_amount"
  *                     message: "must have required property 'debt_amount'"
  *       "401":
- *         description: Fail conditions
+ *         description: Unauthorized user
  *         content:
  *           application/json:
  *             examples:
@@ -294,9 +328,17 @@ router.get("/:debtId",authRole(role.CUSTOMER),async function(req,res,next){
  *                 value:
  *                   - isSuccess: false
  *                     message: "Debtor's account does not exist"
-
+ *               Unauthorized Role:
+ *                 value:
+ *                   - message: 'Not allowed user!'
+ *       "409":
+ *         description: Authorized Role
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: 'User not found!'
  */
-router.post("/",validate(debtCreateSchema),authRole(role.CUSTOMER),async function(req,res){
+router.post("/",validate(debtCreateSchema),authUser,authRole(role.CUSTOMER),async function(req,res){
     try{
         const user_id = +req.body.user_id || 0;
         const debt_account_number = req.body.debt_account_number || '';
@@ -366,64 +408,10 @@ router.post("/",validate(debtCreateSchema),authRole(role.CUSTOMER),async functio
     }
 })
 
-/**
- * @swagger
- * /debtList/{userId}/checkBalance:
- *   get:
- *     summary: Cancel debt (change status debt)
- *     tags: [Debt List]
- *     parameters:
- *       - name: userId
- *         in: path
- *         description: The id of user to check balance
- *         required: true
- *         schema:
- *           type: integer
- *     requestBody:
- *       description: amount to compare with user balance
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               amount:
- *                 type: string
- *                 description: amount to compare
- *           example:
- *             amount: 30000
- *     responses:
- *       "200":
- *         description: Successful operation
- *         content:
- *           application/json:
- *             examples:
- *               Insufficient Balance:
- *                 value:
- *                   - isEnough: false
- *                     message: "Your balance is not enough to make the payment"
- *               Enough Balance:
- *                 value:
- *                   - isEnough: true
- *                     message: "Your balance is enough to make the payment"
- *       "500":
- *         description: Blocked account
- *         content:
- *           application/json:
- *             example:
- *               isEnough: false
- *               message: "Your account is blocked!"
- *       "403":
- *         description: Undefined User
- *         content:
- *           application/json:
- *             example:
- *               isEnough: true
- *               message: "User is not exist"
- */
-router.get("/:userId/checkBalance",async function(req,res){
+router.get("/:userId/checkBalance",authRole(role.CUSTOMER),async function(req,res){
     try {
         const user_id = +req.params.userId;
-        const balance = +req.body.amount;
+        const balance = +req.query.amount;
         console.log(balance);
         const _user = await userModel.genericMethods.findById(user_id);
         if (_user != null){
@@ -449,12 +437,12 @@ router.get("/:userId/checkBalance",async function(req,res){
                 message: "Your balance is enough to make the payment"
             })
         }
-        res.status(403).json({
+        return res.status(403).json({
             isEnough: false,
             message: "User is not exist"
         })
     }catch (err) {
-        res.status(400).json({
+        return res.status(400).json({
             isEnough: false,
             message: err.message
         })
@@ -467,6 +455,17 @@ router.get("/:userId/checkBalance",async function(req,res){
  *   post:
  *     summary: Send otp through user email to verify payment
  *     tags: [Debt List]
+ *     parameters:
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
  *     requestBody:
  *       description: include id of user and id of debt to verify
  *       content:
@@ -488,18 +487,44 @@ router.get("/:userId/checkBalance",async function(req,res){
  *         description: Successful operation
  *         content:
  *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: successful confirmation
+ *                 message:
+ *                   type: string
+ *                   description: response message
  *             example:
  *               isSuccess: true
  *               message: "OTP code has been sent. Please check your email"
- *       "403":
- *         description: Undefined Debt
+ *       "401":
+ *         description: Unauthorized user
  *         content:
  *           application/json:
  *             example:
- *               isSuccess: false
- *               message: "Could not find this debt"
+ *               message: 'Unauthorized user'
+ *       "403":
+ *         description: Undefined Debt & Authorized Role
+ *         content:
+ *           application/json:
+ *             example:
+ *               Undefined Debt:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: "Could not find this debt"
+ *               Authorized Role:
+ *                 value:
+ *                   message: 'Not allowed user!'
+ *       "409":
+ *         description: Authorized Role
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: 'User not found!'
  */
-router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
+router.post("/sendOtp",authUser,authRole(role.CUSTOMER),async function(req,res,next){
     try{
         const userId = +req.body.user_id || 0;
         const debtId = +req.body.debt_id || 0;
@@ -518,13 +543,6 @@ router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
             const nameDebtor = debtorInfo[0].full_name || "";
             const balanceDebtor = debtorInfo[0].balance || 0;
 
-            // const checkBalance = await bankingAccountModel.checkBalanceOfUserByAccountNumber(userAccountNumber,balanceDebtor);
-            // if (!checkBalance){
-            //     return res.status(500).json({
-            //         isSuccess: false,
-            //         message: "Your balance is not enough to make the payment"
-            //     })
-            // }
             //Create transaction
             let newTransaction = {
                 src_account_number: debtorAccountNumber,
@@ -556,13 +574,13 @@ router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
                 message: "OTP code has been sent. Please check your email",
             })
         }
-        res.status(403).json({
+        return res.status(403).json({
             isSuccess: false,
             message: "Could not find this debt",
         })
 
     }catch (err){
-        res.status(400).json({
+        return res.status(400).json({
             isSuccess: false,
             message: err.message
         })
@@ -574,6 +592,17 @@ router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
  *   post:
  *     summary: Re-Send otp through user email to verify payment
  *     tags: [Debt List]
+ *     parameters:
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
  *     requestBody:
  *       description: include id of user and id of debt to verify
  *       content:
@@ -595,18 +624,44 @@ router.post("/sendOtp",authRole(role.CUSTOMER),async function(req,res,next){
  *         description: Successful operation
  *         content:
  *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: successful confirmation
+ *                 message:
+ *                   type: string
+ *                   description: response message
  *             example:
  *               isSuccess: true
  *               message: "OTP code has been sent. Please check your email"
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: 'Unauthorized user'
  *       "403":
  *         description: Undefined Debt
  *         content:
  *           application/json:
+ *             examples:
+ *               Undefined Debt:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: "Could not find this debt"
+ *               Authorized Role:
+ *                 value:
+ *                   message: 'Not allowed user!'
+ *       "409":
+ *         description: Authorized Role
+ *         content:
+ *           application/json:
  *             example:
- *               isSuccess: false
- *               message: "Could not find this debt"
+ *               message: 'User not found!'
  */
-router.post("/re-sendOtp",authRole(role.CUSTOMER),async function(req,res){
+router.post("/re-sendOtp",authUser,authRole(role.CUSTOMER),async function(req,res){
     try{
         const userId = +req.body.user_id || 0;
         const debtId = +req.body.debt_id || 0;
@@ -638,13 +693,13 @@ router.post("/re-sendOtp",authRole(role.CUSTOMER),async function(req,res){
                 message: "OTP code has been sent. Please check your email",
             })
         }
-        res.status(403).json({
+        return res.status(403).json({
             isSuccess: false,
             message: "Could not find this debt",
         })
     }
     catch (err){
-        res.status(400).json({
+        return res.status(400).json({
             isSuccess: false,
             message: err.message
         })
@@ -656,6 +711,17 @@ router.post("/re-sendOtp",authRole(role.CUSTOMER),async function(req,res){
  *   post:
  *     summary: Verify payment debt
  *     tags: [Debt List]
+ *     parameters:
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
  *     requestBody:
  *       description: include id of user, id of debt and otp code to verify
  *       content:
@@ -681,17 +747,46 @@ router.post("/re-sendOtp",authRole(role.CUSTOMER),async function(req,res){
  *         description: Successful operation
  *         content:
  *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: successful confirmation
+ *                 message:
+ *                   type: string
+ *                   description: response message
+ *                 status:
+ *                   type: string
+ *                   description: status of debt
  *             example:
  *               isSuccess: true
  *               message: "Payment Successful"
  *               status: "PAID"
- *       "403":
- *         description: Undefined Debt
+ *       "401":
+ *         description: Unauthorized user
  *         content:
  *           application/json:
  *             example:
- *               isSuccess: false
- *               message: "Could not find this debt"
+ *               message: 'Unauthorized user'
+ *       "403":
+ *         description: Undefined Debt & Authorized Role
+ *         content:
+ *           application/json:
+ *             examples:
+ *               Undefined Debt:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: "Could not find this debt"
+ *               Authorized Role:
+ *                 value:
+ *                   message: 'Not allowed user!'
+ *       "409":
+ *         description: Authorized Role
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: 'User not found!'
  *       "500":
  *         description: Fail conditions
  *         content:
@@ -706,7 +801,7 @@ router.post("/re-sendOtp",authRole(role.CUSTOMER),async function(req,res){
  *                   - isSuccess: false
  *                     message: "Validation failed. OTP code may be incorrect or the session was expired!"
  */
-router.post("/internal/verified-payment",authRole(role.CUSTOMER),async function(req,res,next){
+router.post("/internal/verified-payment",authUser,authRole(role.CUSTOMER),async function(req,res,next){
     try{
         const _debtId = +req.body.debt_id || 0;
         const _userId = +req.body.user_id || 0;
@@ -764,12 +859,12 @@ router.post("/internal/verified-payment",authRole(role.CUSTOMER),async function(
                 message: 'Validation failed. OTP code may be incorrect or the session was expired!'
             });
         }
-        res.status(403).json({
+        return res.status(403).json({
             isSuccess: false,
             message: "Could not find this debt",
         })
     }catch (err){
-        res.status(400).json({
+        return res.status(400).json({
             isSuccess: false,
             message: err.message
         })
@@ -789,6 +884,16 @@ router.post("/internal/verified-payment",authRole(role.CUSTOMER),async function(
  *         required: true
  *         schema:
  *           type: integer
+ *       - name: access_token
+ *         in: header
+ *         description: A string is used to access authentication features
+ *         schema:
+ *           type: string
+ *       - name: refresh_token
+ *         in: header
+ *         description: A string is used to refresh access token if expired
+ *         schema:
+ *           type: string
  *     requestBody:
  *       description: id of user cancel and message
  *       content:
@@ -810,6 +915,15 @@ router.post("/internal/verified-payment",authRole(role.CUSTOMER),async function(
  *         description: Successful operation
  *         content:
  *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: successful confirmation
+ *                 message:
+ *                   type: string
+ *                   description: response message
  *             example:
  *               isSuccess: true
  *               message: "Cancel successful"
@@ -826,26 +940,38 @@ router.post("/internal/verified-payment",authRole(role.CUSTOMER),async function(
  *                     params:
  *                       missingProperty: "debt_cancel_message"
  *                     message: "must have required property 'debt_cancel_message'"
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: 'Unauthorized user'
  *       "403":
  *         description: Undefined Debt
  *         content:
  *           application/json:
+ *             examples:
+ *               Undefined Debt:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: "Could not find this debt"
+ *               Authorized Role:
+ *                 value:
+ *                   message: 'Not allowed user!'
+ *       "409":
+ *         description: Authorized Role
+ *         content:
+ *           application/json:
  *             example:
- *               isSuccess: false
- *               message: "Could not find this debt"
+ *               message: 'User not found!'
  */
-router.put("/cancelDebt/:debtId",validate(debtCancelSchema),authRole(role.CUSTOMER),async function(req,res,next){
+router.put("/cancelDebt/:debtId",validate(debtCancelSchema),authUser,authRole(role.CUSTOMER),async function(req,res,next){
     try {
         const _debtId = +req.params.debtId || 0;
         const _userId = +req.body.user_id || 0;
         const messageCancel = req.body.debt_cancel_message || '';
-        console.log(_debtId)
-        console.log(_userId)
-        console.log(messageCancel)
         const senderInfo = await userModel.genericMethods.findById(_userId);
         const debtInfo = await debtListModel.getDebtById(_debtId);
-        console.log(senderInfo)
-        console.log(debtInfo)
         if (debtInfo != null){
             //if cancel your debt remind
             if (_userId === debtInfo.user_id)
@@ -894,20 +1020,20 @@ router.put("/cancelDebt/:debtId",validate(debtCancelSchema),authRole(role.CUSTOM
             }
             const result = await debtListModel.updateStatusDebtPayment(_debtId,debt_status.CANCEL,messageCancel);
 
-            res.status(200).json({
+            return res.status(200).json({
                 isSuccess: true,
                 message: "Cancel successful"
             })
         }
         else{
-            res.status(403).json({
+            return res.status(403).json({
                 isSuccess: false,
                 message: "Could not find this debt",
             })
         }
 
     }catch (err){
-        res.status(400).json({
+        return res.status(400).json({
             isSuccess: false,
             message: err.message
         })
