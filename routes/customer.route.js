@@ -99,7 +99,8 @@ import jwt from "../utils/jwt.js";
 import axios from "axios";
 import db from "../utils/db.js";
 import otherBank from "../utils/other_bank.js"
-import { authUser } from "../middlewares/auth.mdw.js"
+import { authRole, authUser } from "../middlewares/auth.mdw.js"
+import role from "../utils/role.js";
 
 
 const router = express.Router()
@@ -179,6 +180,18 @@ const router = express.Router()
  *            application/json:
  *              example:
  *                message: Unauthorized user!
+ *       "403":
+ *          description: Unauthorized user role
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: Not allowed user!
+ *       "409":
+ *          description: User not found
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: User not found!
  *       "500":
  *         description: Unsuccessfully get all bank accounts.
  *         content:
@@ -187,7 +200,7 @@ const router = express.Router()
  *               isSuccess: false
  *               message: "Can not get bank accounts"
  */
-router.get("/:userId/bankaccounts", validateParams, authUser, async (req, res) => {
+router.get("/:userId/bankaccounts", validateParams, authUser,authRole(role.CUSTOMER), async (req, res) => {
     const userId = +req.params.userId
     try {
         const bankAccounts = await bankingAccountModel.findByUserIdAndAccountType(userId, 1)
@@ -275,6 +288,18 @@ router.get("/:userId/bankaccounts", validateParams, authUser, async (req, res) =
  *            application/json:
  *              example:
  *                message: Unauthorized user!
+ *       "403":
+ *          description: Unauthorized user role
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: Not allowed user!
+ *       "409":
+ *          description: User not found
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: User not found!
  *       "500":
  *         description: Unsuccessfully get bank account.
  *         content:
@@ -283,7 +308,7 @@ router.get("/:userId/bankaccounts", validateParams, authUser, async (req, res) =
  *               isSuccess: false
  *               message: "Can not get bank account"
  */
-router.get("/:userId/bankaccount", validateParams, authUser, async (req, res) => {
+router.get("/:userId/bankaccount", validateParams, authUser,authRole(role.CUSTOMER), async (req, res) => {
     const userId = +req.params.userId
     try {
         const bankAccount = await bankingAccountModel.findByUserIdAndBankCode(userId)
@@ -427,6 +452,18 @@ router.get("/:userId/bankaccount", validateParams, authUser, async (req, res) =>
  *            application/json:
  *              example:
  *                message: Unauthorized user!
+ *       "403":
+ *          description: Unauthorized user role
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: Not allowed user!
+ *       "409":
+ *          description: User not found
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: User not found!
  *       "500":
  *         description: Invalid Information Intra Transaction.
  *         content:
@@ -437,7 +474,7 @@ router.get("/:userId/bankaccount", validateParams, authUser, async (req, res) =>
  */
 
 // First step : Check Info Inter Transaction Before Real Transfer
-router.post("/:userId/intratransaction", validateParams, authUser, async (req, res) => {
+router.post("/:userId/intratransaction", validateParams, authUser,authRole(role.CUSTOMER), async (req, res) => {
     const infoTransaction = req.body
     const userId = +req.params.userId
     try {
@@ -603,6 +640,18 @@ router.post("/:userId/intratransaction", validateParams, authUser, async (req, r
  *            application/json:
  *              example:
  *                message: Unauthorized user!
+ *       "403":
+ *          description: Unauthorized user role
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: Not allowed user!
+ *       "409":
+ *          description: User not found
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: User not found!
  *       "500":
  *         description: Invalid Information Intra Transaction.
  *         content:
@@ -614,7 +663,7 @@ router.post("/:userId/intratransaction", validateParams, authUser, async (req, r
 
 // ---------- DUNG CHO CA LIEN NGAN HANG VA NOI BO --------------------- //
 // Second step: Confirm transaction after all info is correct 
-router.post("/:userId/transaction/confirm", validateParams, authUser, async (req, res) => {
+router.post("/:userId/transaction/confirm", validateParams, authUser,authRole(role.CUSTOMER), async (req, res) => {
     const userId = +req.params.userId
     const infoTransaction = req.body
     try {
@@ -1142,6 +1191,18 @@ router.post("/transaction/:id/otp", authUser, async (req, res) => {
  *            application/json:
  *              example:
  *                message: Unauthorized user!
+ *       "403":
+ *          description: Unauthorized user role
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: Not allowed user!
+ *       "409":
+ *          description: User not found
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: User not found!
  *       "500":
  *         description: Invalid Information Inter Transaction.
  *         content:
@@ -1152,7 +1213,7 @@ router.post("/transaction/:id/otp", authUser, async (req, res) => {
  */
 
 // First step: Get des_full_info from other banks based on des_account_number
-router.post("/:userId/intertransaction", validateParams, authUser, async (req, res) => {
+router.post("/:userId/intertransaction", validateParams, authUser,authRole(role.CUSTOMER), async (req, res) => {
     const infoTransaction = req.body
     const userId = +req.params.userId
     // Using trx as a transaction object:
@@ -2022,6 +2083,18 @@ router.post("/intertransaction", async (req, res) => {
  *            application/json:
  *              example:
  *                message: Unauthorized user!
+ *       "403":
+ *          description: Unauthorized user role
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: Not allowed user!
+ *       "409":
+ *          description: User not found
+ *          content:
+ *            application/json:
+ *              example:
+ *                message: User not found!
  *       "500":
  *         description: Invalid Save Recipient.
  *         content:
@@ -2032,7 +2105,7 @@ router.post("/intertransaction", async (req, res) => {
  */
 
 // Save recipient to recipient list
-router.post("/save", authUser, async (req, res) => {
+router.post("/save", authUser, authRole(role.CUSTOMER),async (req, res) => {
     const infoRecipient = req.body
     try {
         let result = -1
