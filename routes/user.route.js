@@ -769,8 +769,8 @@ router.post('/:userId/recipients', validateParams, validate(recipientSchema), au
                 });
 
             if (nickname === null) {
-                const owner = await userAccountModel.findByUserId(bankingAccount.user_id);
-                nickname = owner.username;
+                const owner = await userModel.genericMethods.findById(bankingAccount.user_id);
+                nickname = owner.full_name;
             }
 
             const recipient = {

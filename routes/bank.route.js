@@ -23,7 +23,7 @@ router.get("/",async(req,res)=>{
 //get info user by account number
 router.get("/infoUser",async function(req,res){
     try{
-        const account_number = req.body.account_number;
+        const account_number = req.query.account_number;
         console.log(account_number)
         const userInfo = await bankingAccountModel.getInfoUserBy(account_number);
         if (userInfo !== null){
