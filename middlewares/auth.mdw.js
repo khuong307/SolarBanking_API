@@ -61,6 +61,12 @@ export function authRole(role) {
             userId = req.headers.user_id
         }
         const account = await userAccountModel.findByUserId(userId);
+        if (account == null){
+            return res.status(409).json({
+                message: "User not found!"
+            })
+        }
+        console.log(account)
         const userType = await userTypeModel.genericMethods.findById(account.user_type_id);
 
         if (role != userType.user_type_name)

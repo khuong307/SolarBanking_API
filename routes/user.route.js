@@ -1001,7 +1001,183 @@ router.delete('/:userId/recipients/:accountNumber', validateParams, authUser, au
     });
 });
 
-// Get list of transaction history
+/**
+ * @swagger
+ * /users/{userId}/history:
+ *   get:
+ *     summary: Get transaction history (last 30 days)
+ *     tags: [User]
+ *     parameters:
+ *     - name: userId
+ *       in: path
+ *       description: Customer ID to get transaction history
+ *       required: true
+ *       schema:
+ *         type: string
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
+ *     responses:
+ *       "200":
+ *         description: Successful operation.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isFound:
+ *                   type: boolean
+ *                   description: The get status
+ *                 transfer_list_by_customer:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       transaction_id:
+ *                         type: integer
+ *                         description: The transaction id
+ *                       src_account_number:
+ *                         type: string
+ *                         description: The account number execute transaction
+ *                       des_account_number:
+ *                         type: string
+ *                         description: The account number receive amount from transaction
+ *                       transaction_amount:
+ *                         type: integer
+ *                         description: The amount of transaction
+ *                       transaction_message:
+ *                         type: string
+ *                         description: The message of transaction
+ *                       pay_transaction_fee:
+ *                         type: string
+ *                         description: Which account number pay for tranfer fee (SRC or DES)
+ *                       is_success:
+ *                         type: boolean
+ *                         description: The transaction status
+ *                       transaction_created_at:
+ *                         type: string
+ *                         format: date-time
+ *                         description: The created date-time transaction
+ *                       transaction_type:
+ *                         type: integer
+ *                         description: The type of transaction (debt payment or transfer)
+ *                       other_fullname:
+ *                         type: string
+ *                         description: The full name of received account
+ *                 paid_debt_list:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                 received_debt_list:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                 charge_by_SLB:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                 received_from_others:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *             examples:
+ *               Get successfully:
+ *                 value:
+ *                   isFound: true
+ *                   transfer_list_by_customer: [{
+ *                      transaction_id: 80,
+ *                      src_account_number: '28069884',
+ *                      des_account_number: '32709550',
+ *                      transaction_amount: 30000,
+ *                      transaction_message: 'Banh bao 2 trung muoi',
+ *                      pay_transaction_fee: 'SRC',
+ *                      is_success: 1,
+ *                      transaction_created_at: 2022-12-30T07:37:57.000Z,
+ *                      transaction_type: 1,
+ *                      other_fullname: 'Dang Duy Khang'
+ *                   }]
+ *                   paid_debt_list: [{
+ *                      transaction_id: 10,
+ *                      src_account_number: '71873611',
+ *                      des_account_number: '28069884',
+ *                      transaction_amount: 20000,
+ *                      transaction_message: 'bánh mì + gửi xe',
+ *                      pay_transaction_fee: 'SRC',
+ *                      is_success: 1,
+ *                      transaction_created_at: 2023-01-03T11:22:00.000Z,
+ *                      transaction_type: 1,
+ *                      other_fullname: 'Nguyen Vu Duy Khuong'
+ *                   }]
+ *                   received_debt_list: []
+ *                   charge_by_SLB: [{
+ *                      transaction_id: 29,
+ *                      src_account_number: 'SLB',
+ *                      des_account_number: '71873611',
+ *                      transaction_amount: 50000,
+ *                      transaction_message: 'SLB Charge 50,000 VND at 2023-01-03T11:22:00.000Z',
+ *                      pay_transaction_fee: 'SRC',
+ *                      is_success: 1,
+ *                      transaction_created_at: 2023-01-03T11:22:00.000Z,
+ *                      transaction_type: 1,
+ *                      other_fullname: 'Nguyen Vu Duy Khuong'
+ *                   }]
+ *                   received_from_others: [{
+ *                      transaction_id: 29,
+ *                      src_account_number: '23434009',
+ *                      des_account_number: '71873611',
+ *                      transaction_amount: 100000,
+ *                      transaction_message: 'Hung gui Ngoc tien an sang nhe',
+ *                      pay_transaction_fee: 'SRC',
+ *                      is_success: 1,
+ *                      transaction_created_at: 2023-01-06T11:22:00.000Z,
+ *                      transaction_type: 1,
+ *                      other_fullname: 'Nguyen An Hung'
+ *                   }]
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "209":
+ *         description: Wrong information of customer.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: 'Not found this customer base on account number or username!'
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ *       "403":
+ *         description: User must be employee
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Not allowed user!
+ *       "409":
+ *         description: User ID not found!
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: User not found!
+ *       "500":
+ *         description: Server Internal Error
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Server Internal Error
+ */
 router.get('/:userId/history', validateParams, authUser, authRole(role.CUSTOMER), async function(req, res) {
     const userId = +req.params.userId;
     const userAccounts =   await banking_accountModel.genericMethods.findByColMany("user_id", userId)
@@ -1011,6 +1187,7 @@ router.get('/:userId/history', validateParams, authUser, authRole(role.CUSTOMER)
             userInfo = c
         }
     }
+    console.log(userInfo)
     if (userInfo == null){
         return res.status(209).json({
             isFound: false,
