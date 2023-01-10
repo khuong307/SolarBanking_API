@@ -5,7 +5,7 @@
  *   description: API to handle features and information belonging to debt list.
  * components:
  *   schemas:
- *     Debt List:
+ *     DebtList:
  *       type: object
  *       properties:
  *         debt_id:
@@ -85,16 +85,29 @@ const router = express.Router();
  *       required: true
  *       schema:
  *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
  *     responses:
  *       "200":
  *         description: Successful operation.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: "#/components/schemas/Debt List"
+ *               $ref: "#/components/schemas/DebtList"
  *             examples:
  *               Get successfully:
  *                 value:
+ *                   isSuccess: true
+ *                   message: Successful operation
+ *                   self_debt_list:
  *                   - debt_id: 1
  *                     user_id: 1
  *                     debt_account_number: "123456"
@@ -108,9 +121,29 @@ const router = express.Router();
  *                     debt_account_number: "123456"
  *                     debt_amount: 40000
  *                     debt_message: "New debt for you"
- *                     paid_transaction_id: 1
+ *                     paid_transaction_id: 2
  *                     debt_status: "PAID"
  *                     debt_created_at: "2023-01-07 00:34:58"
+ *                   other_debt_list:
+ *                   - debt_id: 3
+ *                     user_id: 5
+ *                     debt_account_number: "111111"
+ *                     debt_amount: 500000
+ *                     debt_message: "New debt for you"
+ *                     paid_transaction_id: 3
+ *                     debt_status: "NOT PAID"
+ *                     debt_created_at: "2023-01-10 00:00:58"
+ *                   - debt_id: 4
+ *                     user_id: 2
+ *                     debt_account_number: "111111"
+ *                     debt_amount: 70000
+ *                     debt_message: "New debt for you"
+ *                     paid_transaction_id: 4
+ *                     debt_status: "PAID"
+ *                     debt_created_at: "2023-01-09 17:34:58"
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
  *       "400":
  *         description: Get failed.
  *         content:
@@ -124,19 +157,19 @@ const router = express.Router();
  *             example:
  *               message: Unauthorized user!
  *       "403":
- *         description: Authorized Role
+ *         description: User must be customer
  *         content:
  *           application/json:
  *             example:
  *               message: 'Not allowed user!'
  *       "409":
- *         description: Authorized Role
+ *         description: Unauthorized Role
  *         content:
  *           application/json:
  *             example:
  *               message: 'User not found!'
  */
-router.get("/:userId/list",validateParams,authRole(role.CUSTOMER),async function(req,res){
+router.get("/:userId/list",validateParams,authUser,authRole(role.CUSTOMER),async function(req,res){
     try{
         //get userid from body
         const _userId = +req.params.userId || 0;
@@ -185,26 +218,46 @@ router.get("/:userId/list",validateParams,authRole(role.CUSTOMER),async function
  *       required: true
  *       schema:
  *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
  *     responses:
  *       "200":
  *         description: Successful operation.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: "#/components/schemas/Debt List"
+ *               $ref: "#/components/schemas/DebtList"
  *             examples:
  *               Get successfully:
  *                 value:
  *                   isSuccess: true
  *                   message: "Successful operation"
- *                   debt_id: 1
- *                   user_id: 1
- *                   debt_account_number: "123456"
- *                   debt_amount: 300000
- *                   debt_message: "New debt for you"
- *                   paid_transaction_id: 1
- *                   debt_status: "NOT PAID"
- *                   debt_created_at: "2023-01-08 00:34:58"
+ *                   objDebt:
+ *                   - debt_id: 1
+ *                     user_id: 1
+ *                     debt_account_number: "123456"
+ *                     debt_amount: 300000
+ *                     debt_message: "New debt for you"
+ *                     paid_transaction_id: 1
+ *                     debt_status: "NOT PAID"
+ *                     debt_created_at: "2023-01-08 00:34:58"
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
  *       "403":
  *         description: Undefined Debt
  *         content:
@@ -213,7 +266,7 @@ router.get("/:userId/list",validateParams,authRole(role.CUSTOMER),async function
  *               isSuccess: false
  *               message: Could not find this debt
  */
-router.get("/:debtId",async function(req,res,next){
+router.get("/:debtId",authUser,authRole(role.CUSTOMER),async function(req,res,next){
     try {
         const _debtId= +req.params.debtId || 0;
         const objDebt = await debtListModel.getDebtById(_debtId)
@@ -237,6 +290,7 @@ router.get("/:debtId",async function(req,res,next){
         })
     }
 })
+
 /**
  * @swagger
  * /debtList/:
@@ -255,7 +309,7 @@ router.get("/:debtId",async function(req,res,next){
  *       schema:
  *         type: string
  *     requestBody:
- *       description: Information Debt
+ *       description: Debt Information
  *       content:
  *         application/json:
  *           schema:
@@ -288,28 +342,29 @@ router.get("/:debtId",async function(req,res,next){
  *               properties:
  *                 isSuccess:
  *                   type: boolean
- *                   description: successful confirmation
+ *                   description: Successful confirmation
  *                 message:
  *                   type: string
- *                   description: response message
+ *                   description: Response message
  *             examples:
  *               Get successfully:
  *                 value:
  *                   isSuccess: true
  *                   message: "Create new debt successful!"
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
  *       "400":
- *         description: Fail parameters
+ *         description: Invalid Schema
  *         content:
  *           application/json:
  *             example:
- *               Invalid Schema:
- *                 value:
- *                   - instancePath: ""
- *                     schemaPath: "#/required"
- *                     keyword: "required"
- *                     params:
- *                       missingProperty: "debt_amount"
- *                     message: "must have required property 'debt_amount'"
+ *             - instancePath: ""
+ *               schemaPath: "#/required"
+ *               keyword: "required"
+ *               params:
+ *                 missingProperty: "debt_amount"
+ *               message: "must have required property 'debt_amount'"
  *       "401":
  *         description: Unauthorized user
  *         content:
@@ -317,8 +372,8 @@ router.get("/:debtId",async function(req,res,next){
  *             examples:
  *               Unauthorized user:
  *                 value:
- *                   - isSuccess: false
- *                     message: "Unauthorized user!"
+ *                   isSuccess: false
+ *                   message: "Unauthorized user!"
  *       "403":
  *         description: Undefined User
  *         content:
@@ -326,13 +381,13 @@ router.get("/:debtId",async function(req,res,next){
  *             examples:
  *               Invalid Account Number:
  *                 value:
- *                   - isSuccess: false
- *                     message: "Debtor's account does not exist"
+ *                   isSuccess: false
+ *                   message: "Debtor's account does not exist"
  *               Unauthorized Role:
  *                 value:
- *                   - message: 'Not allowed user!'
+ *                   message: 'Not allowed user!'
  *       "409":
- *         description: Authorized Role
+ *         description: Unauthorized Role
  *         content:
  *           application/json:
  *             example:
@@ -415,18 +470,28 @@ router.post("/",validate(debtCreateSchema),authUser,authRole(role.CUSTOMER),asyn
  *     summary: Check if your account balance is enough for payment
  *     tags: [Debt List]
  *     parameters:
- *       - name: userId
- *         in: path
- *         description: The id of user to check balance
- *         required: true
- *         schema:
- *           type: integer
- *       - name: amount
- *         in: query
- *         description: amount to compare with user balance
- *         required: true
- *         schema:
- *           type: integer
+ *     - name: userId
+ *       in: path
+ *       description: The id of user to check balance
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     - name: amount
+ *       in: query
+ *       description: amount to compare with user balance
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
  *     responses:
  *       "200":
  *         description: Successful operation
@@ -444,12 +509,15 @@ router.post("/",validate(debtCreateSchema),authUser,authRole(role.CUSTOMER),asyn
  *             examples:
  *               Insufficient Balance:
  *                 value:
- *                   - isEnough: false
- *                     message: "Your balance is not enough to make the payment"
+ *                   isEnough: false
+ *                   message: "Your balance is not enough to make the payment"
  *               Enough Balance:
  *                 value:
- *                   - isEnough: true
- *                     message: "Your balance is enough to make the payment"
+ *                   isEnough: true
+ *                   message: "Your balance is enough to make the payment"
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
  *       "500":
  *         description: Blocked account
  *         content:
@@ -466,17 +534,17 @@ router.post("/",validate(debtCreateSchema),authUser,authRole(role.CUSTOMER),asyn
  *                 value:
  *                   isEnough: true
  *                   message: "User is not exist"
- *               Authorized Role:
+ *               Unauthorized Role:
  *                 value:
  *                   message: 'Not allowed user!'
  *       "409":
- *         description: Authorized Role
+ *         description: Unauthorized Role
  *         content:
  *           application/json:
  *             example:
  *               message: 'User not found!'
  */
-router.get("/:userId/checkBalance",authRole(role.CUSTOMER),async function(req,res){
+router.get("/:userId/checkBalance",authUser,authRole(role.CUSTOMER),async function(req,res){
     try {
         const user_id = +req.params.userId;
         const balance = +req.query.amount;
@@ -535,7 +603,7 @@ router.get("/:userId/checkBalance",authRole(role.CUSTOMER),async function(req,re
  *       schema:
  *         type: string
  *     requestBody:
- *       description: include id of user and id of debt to verify
+ *       description: Include id of user and id of debt to verify
  *       content:
  *         application/json:
  *           schema:
@@ -560,13 +628,18 @@ router.get("/:userId/checkBalance",authRole(role.CUSTOMER),async function(req,re
  *               properties:
  *                 isSuccess:
  *                   type: boolean
- *                   description: successful confirmation
+ *                   description: Successful confirmation
  *                 message:
  *                   type: string
- *                   description: response message
- *             example:
- *               isSuccess: true
- *               message: "OTP code has been sent. Please check your email"
+ *                   description: Response message
+ *             examples:
+ *               Send OTP successfully:
+ *                 value:
+ *                   isSuccess: true
+ *                   message: OTP Code has been sent. Please check your mail
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
  *       "401":
  *         description: Unauthorized user
  *         content:
@@ -577,16 +650,16 @@ router.get("/:userId/checkBalance",authRole(role.CUSTOMER),async function(req,re
  *         description: Undefined Debt & Authorized Role
  *         content:
  *           application/json:
- *             example:
+ *             examples:
  *               Undefined Debt:
  *                 value:
  *                   isSuccess: false
  *                   message: "Could not find this debt"
- *               Authorized Role:
+ *               Unauthorized Role:
  *                 value:
  *                   message: 'Not allowed user!'
  *       "409":
- *         description: Authorized Role
+ *         description: Unauthorized Role
  *         content:
  *           application/json:
  *             example:
@@ -701,9 +774,14 @@ router.post("/sendOtp",authUser,authRole(role.CUSTOMER),async function(req,res,n
  *                 message:
  *                   type: string
  *                   description: response message
- *             example:
- *               isSuccess: true
- *               message: "OTP code has been sent. Please check your email"
+ *             examples:
+ *               Resend OTP successfully:
+ *                 value:
+ *                   isSuccess: true
+ *                   message: "OTP code has been sent. Please check your email"
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
  *       "401":
  *         description: Unauthorized user
  *         content:
@@ -719,11 +797,11 @@ router.post("/sendOtp",authUser,authRole(role.CUSTOMER),async function(req,res,n
  *                 value:
  *                   isSuccess: false
  *                   message: "Could not find this debt"
- *               Authorized Role:
+ *               Unauthorized Role:
  *                 value:
  *                   message: 'Not allowed user!'
  *       "409":
- *         description: Authorized Role
+ *         description: Unauthorized Role
  *         content:
  *           application/json:
  *             example:
@@ -827,10 +905,15 @@ router.post("/re-sendOtp",authUser,authRole(role.CUSTOMER),async function(req,re
  *                 status:
  *                   type: string
  *                   description: status of debt
- *             example:
- *               isSuccess: true
- *               message: "Payment Successful"
- *               status: "PAID"
+ *             examples:
+ *               Pay debt successfully:
+ *                 value:
+ *                   isSuccess: true
+ *                   message: "Payment Successful"
+ *                   status: "PAID"
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
  *       "401":
  *         description: Unauthorized user
  *         content:
@@ -838,7 +921,7 @@ router.post("/re-sendOtp",authUser,authRole(role.CUSTOMER),async function(req,re
  *             example:
  *               message: 'Unauthorized user'
  *       "403":
- *         description: Undefined Debt & Authorized Role
+ *         description: Undefined Debt & Unauthorized Role
  *         content:
  *           application/json:
  *             examples:
@@ -846,11 +929,11 @@ router.post("/re-sendOtp",authUser,authRole(role.CUSTOMER),async function(req,re
  *                 value:
  *                   isSuccess: false
  *                   message: "Could not find this debt"
- *               Authorized Role:
+ *               Unauthorized Role:
  *                 value:
  *                   message: 'Not allowed user!'
  *       "409":
- *         description: Authorized Role
+ *         description: Unauthorized Role
  *         content:
  *           application/json:
  *             example:
@@ -862,16 +945,16 @@ router.post("/re-sendOtp",authUser,authRole(role.CUSTOMER),async function(req,re
  *             examples:
  *               OTP Empty:
  *                 value:
- *                   - isSuccess: false
- *                     message: "OTP is empty"
+ *                   isSuccess: false
+ *                   message: "OTP is empty"
  *               Invalid OTP:
  *                 value:
- *                   - isSuccess: false
- *                     message: "Validation failed. OTP code may be incorrect or the session was expired!"
+ *                   isSuccess: false
+ *                   message: "Validation failed. OTP code may be incorrect or the session was expired!"
  *               Not Enough Amount:
  *                 value:
- *                   - isSuccess: false
- *                     message: "Your balance is not enough to make the payment"
+ *                   isSuccess: false
+ *                   message: "Your balance is not enough to make the payment"
  */
 router.post("/internal/verified-payment",authUser,authRole(role.CUSTOMER),async function(req,res,next){
     try{
@@ -960,22 +1043,22 @@ router.post("/internal/verified-payment",authUser,authRole(role.CUSTOMER),async 
  *     summary: Cancel debt (change status debt)
  *     tags: [Debt List]
  *     parameters:
- *       - name: debtId
- *         in: path
- *         description: The id to cancel debt
- *         required: true
- *         schema:
- *           type: integer
- *       - name: access_token
- *         in: header
- *         description: A string is used to access authentication features
- *         schema:
- *           type: string
- *       - name: refresh_token
- *         in: header
- *         description: A string is used to refresh access token if expired
- *         schema:
- *           type: string
+ *     - name: debtId
+ *       in: path
+ *       description: The id to cancel debt
+ *       required: true
+ *       schema:
+ *         type: integer
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *          type: string
  *     requestBody:
  *       description: id of user cancel and message
  *       content:
@@ -1006,22 +1089,25 @@ router.post("/internal/verified-payment",authUser,authRole(role.CUSTOMER),async 
  *                 message:
  *                   type: string
  *                   description: response message
- *             example:
- *               isSuccess: true
- *               message: "Cancel successful"
+ *             examples:
+ *                Cancel debt successfully:
+ *                  value:
+ *                    isSuccess: true
+ *                    message: Cancel successfully
+ *                Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
  *       "400":
  *         description: Fail parameters
  *         content:
  *           application/json:
  *             example:
- *               Invalid Schema:
- *                 value:
- *                   - instancePath: ""
- *                     schemaPath: "#/required"
- *                     keyword: "required"
- *                     params:
- *                       missingProperty: "debt_cancel_message"
- *                     message: "must have required property 'debt_cancel_message'"
+ *             - instancePath: ""
+ *               schemaPath: "#/required"
+ *               keyword: "required"
+ *               params:
+ *                 missingProperty: "debt_cancel_message"
+ *               message: "must have required property 'debt_cancel_message'"
  *       "401":
  *         description: Unauthorized user
  *         content:
@@ -1037,11 +1123,11 @@ router.post("/internal/verified-payment",authUser,authRole(role.CUSTOMER),async 
  *                 value:
  *                   isSuccess: false
  *                   message: "Could not find this debt"
- *               Authorized Role:
+ *               Unauthorized Role:
  *                 value:
  *                   message: 'Not allowed user!'
  *       "409":
- *         description: Authorized Role
+ *         description: Unauthorized Role
  *         content:
  *           application/json:
  *             example:

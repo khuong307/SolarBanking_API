@@ -142,10 +142,10 @@ const router = express.Router()
  *                 bankAccounts:
  *                   type: array
  *                   description: list of bank accounts of user
- *               items:
- *                 $ref: '#/components/schemas/BankingAccount'
+ *                   items:
+ *                     $ref: '#/components/schemas/BankingAccount'
  *             examples:
- *               get all bank accounts:
+ *               Get all bank accounts:
  *                 value:
  *                   isSuccess: true
  *                   bankAccounts: [
@@ -171,9 +171,14 @@ const router = express.Router()
  *         description: Unsuccessfully get all bank accounts.
  *         content:
  *           application/json:
- *             example:
- *               isSuccess: false
- *               message: "There is no bank account for this user"
+ *             examples:
+ *               Get failed:
+ *                 value:
+ *                   isSuccess: false
+ *                   message: "There is no bank account for this user"
+ *               Invalid parameter:
+ *                 value:
+ *                   error: 'The id parameter must be a positive integer'
  *       "401":
  *          description: Unauthorized user
  *          content:
@@ -261,8 +266,9 @@ router.get("/:userId/bankaccounts", validateParams, authUser,authRole(role.CUSTO
  *                 bankAccount:
  *                   type: object
  *                   description: bank account of user
+ *                   $ref: "#/components/schemas/BankingAccount"
  *             examples:
- *               get bank account:
+ *               Get bank account:
  *                 value:
  *                   isSuccess: true
  *                   bankAccounts: {
@@ -279,9 +285,14 @@ router.get("/:userId/bankaccounts", validateParams, authUser,authRole(role.CUSTO
  *         description: Unsuccessfully get bank account.
  *         content:
  *           application/json:
- *             example:
- *               isSuccess: false
- *               message: "There is no bank account for this user"
+ *             examples:
+ *               Get failed:
+ *                 value:
+ *                    isSuccess: false
+ *                    message: "There is no bank account for this user"
+ *               Invalid parameter:
+ *                 value:
+ *                   error: 'The id parameter must be a positive integer'
  *       "401":
  *          description: Unauthorized user
  *          content:
@@ -337,7 +348,7 @@ router.get("/:userId/bankaccount", validateParams, authUser,authRole(role.CUSTOM
  * @swagger
  * /customers/{userId}/intratransaction:
  *   post:
- *     summary: FIrst step - Check Info Intra Transaction Before Real Transfer
+ *     summary: First step - Check Info Intra Transaction Before Real Transfer
  *     tags: [Customer Transaction]
  *     parameters:
  *     - name: userId
@@ -405,6 +416,37 @@ router.get("/:userId/bankaccount", validateParams, authUser,authRole(role.CUSTOM
  *                 infoTransaction:
  *                   type: object
  *                   description: information of transaction includes recipient information
+ *                   properties:
+ *                     src_account_number:
+ *                       type: string
+ *                       description: The account number transfer money
+ *                     des_account_number:
+ *                       type: string
+ *                       description: The account number receive money
+ *                     bank_code:
+ *                       type: string
+ *                       description: The bank code of destination account
+ *                     transaction_amount:
+ *                       type: integer
+ *                       description: The amount of transaction
+ *                     transaction_message:
+ *                       type: string
+ *                       description: The message of transaction
+ *                     pay_transaction_fee:
+ *                       type: string
+ *                       description: A string to decide account number pay transaction fee (SRC or DES)
+ *                     full_name:
+ *                       type: string
+ *                       description: The full name of recipient
+ *                     email:
+ *                       type: string
+ *                       description: The email of recipient
+ *                     phone:
+ *                       type: string
+ *                       description: The phone number of recipient
+ *                     transaction_type:
+ *                       type: integer
+ *                       description: The transaction type (debt payment or transfer money)
  *             examples:
  *               Valid Information Transaction:
  *                 value:
@@ -433,7 +475,7 @@ router.get("/:userId/bankaccount", validateParams, authUser,authRole(role.CUSTOM
  *               Locked Bank Account:
  *                 value:
  *                   isSuccess: false
- *                   messsage: "This account number is locked"
+ *                   message: "This account number is locked"
  *               Money transaction invalid:
  *                 value:
  *                   isSuccess: false
@@ -446,6 +488,9 @@ router.get("/:userId/bankaccount", validateParams, authUser,authRole(role.CUSTOM
  *                 value:
  *                   isSuccess: false
  *                   message: "destination account number is invalid"
+ *               Invalid parameter:
+ *                 value:
+ *                   error: 'The id parameter must be a positive integer'
  *       "401":
  *          description: Unauthorized user
  *          content:
@@ -548,7 +593,7 @@ router.post("/:userId/intratransaction", validateParams, authUser,authRole(role.
  * @swagger
  * /customers/{userId}/transaction/confirm:
  *   post:
- *     summary: Second step - Confirm information transaction ( used for both intrabank and interbank)
+ *     summary: Second step - Confirm information transaction (used for both intrabank and interbank)
  *     tags: [Customer Transaction]
  *     parameters:
  *     - name: userId
@@ -634,6 +679,9 @@ router.post("/:userId/intratransaction", validateParams, authUser,authRole(role.
  *                 value:
  *                   isSuccess: false
  *                   message: "Money transaction is invalid"
+ *               Invalid parameter:
+ *                 value:
+ *                   error: 'The id parameter must be a positive integer'
  *       "401":
  *          description: Unauthorized user
  *          content:
@@ -771,8 +819,33 @@ router.post("/:userId/transaction/confirm", validateParams, authUser,authRole(ro
  *                 infoTransaction:
  *                   type: object
  *                   description: The information of a transaction
+ *                   properties:
+ *                     isSavedRecipientTable:
+ *                       type: boolean
+ *                       description: Whether recipient is saved
+ *                     full_name:
+ *                       type: string
+ *                       description: The full name of recipient
+ *                     des_account_number:
+ *                       type: string
+ *                       description: The recipient account number
+ *                     bank:
+ *                       type: string
+ *                       description: The name of recipient's bank
+ *                     transaction_amount:
+ *                       type: integer
+ *                       description: The amount of transaction
+ *                     transaction_message:
+ *                       type: string
+ *                       description: The message of transaction
+ *                     transaction_fee:
+ *                       type: integer
+ *                       description: The fee of transaction
+ *                     total:
+ *                       type: integer
+ *                       description: The total amount includes fee and transaction amount
  *             examples:
- *               Create transaction successfully ( completed):
+ *               Create transaction successfully (completed):
  *                 value:
  *                   isSuccess: true
  *                   infoTransaction: {
@@ -947,7 +1020,7 @@ router.post("/intratransaction/:id", authUser, async (req, res) => {
  * @swagger
  * /customers/transaction/{id}/otp:
  *   post:
- *     summary: Resend OTP of a transaction ( used for both intrabank and interbank) 
+ *     summary: Resend OTP of a transaction (used for both intrabank and interbank)
  *     tags: [Customer Transaction]
  *     parameters:
  *     - name: id
@@ -984,7 +1057,7 @@ router.post("/intratransaction/:id", authUser, async (req, res) => {
  *               Resend OTP successfully:
  *                 value:
  *                   isSuccess: true
- *                   message: OTP has been renew
+ *                   message: OTP has been renewed
  *               Get new access token:
  *                 value:
  *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
@@ -1006,14 +1079,14 @@ router.post("/intratransaction/:id", authUser, async (req, res) => {
  *               Invalid Email Sender:
  *                 value:
  *                   isSuccess: false
- *                   message: OTP can not be renew because can't find src_information
+ *                   message: OTP can not be renewed because can't find src_information
  *       "500":
  *         description: Resend OTP failed.
  *         content:
  *           application/json:
  *             example:
  *               isSuccess: false
- *               message: "OTP Can not be resend"
+ *               message: "OTP can not be resent"
  */
 
 // Resend OTP
@@ -1072,7 +1145,7 @@ router.post("/transaction/:id/otp", authUser, async (req, res) => {
  * @swagger
  * /customers/{userId}/intertransaction:
  *   post:
- *     summary: FIrst step - Check Info Inter Transaction + Get des_account_number information
+ *     summary: First step - Check Info Inter Transaction + Get des_account_number information
  *     tags: [Customer Transaction]
  *     parameters:
  *     - name: userId
@@ -1140,6 +1213,37 @@ router.post("/transaction/:id/otp", authUser, async (req, res) => {
  *                 infoTransaction:
  *                   type: object
  *                   description: information of transaction includes recipient information
+ *                   properties:
+ *                     src_account_number:
+ *                       type: string
+ *                       description: The account number transfer money
+ *                     des_account_number:
+ *                       type: string
+ *                       description: The account number receive money
+ *                     bank_code:
+ *                       type: string
+ *                       description: The bank code of destination account
+ *                     transaction_amount:
+ *                       type: integer
+ *                       description: The amount of transaction
+ *                     transaction_message:
+ *                       type: string
+ *                       description: The message of transaction
+ *                     pay_transaction_fee:
+ *                       type: string
+ *                       description: A string to decide account number pay transaction fee (SRC or DES)
+ *                     full_name:
+ *                       type: string
+ *                       description: The full name of recipient
+ *                     email:
+ *                       type: string
+ *                       description: The email of recipient
+ *                     phone:
+ *                       type: string
+ *                       description: The phone number of recipient
+ *                     transaction_type:
+ *                       type: integer
+ *                       description: The transaction type (debt payment or transfer money)
  *             examples:
  *               Valid Information Transaction:
  *                 value:
@@ -1185,6 +1289,9 @@ router.post("/transaction/:id/otp", authUser, async (req, res) => {
  *                 value:
  *                   isSuccess: false
  *                   message: destination account number is invalid
+ *               Invalid parameter:
+ *                 value:
+ *                   error: 'The id parameter must be a positive integer'
  *       "401":
  *          description: Unauthorized user
  *          content:
@@ -1343,10 +1450,10 @@ router.post("/:userId/intertransaction", validateParams, authUser,authRole(role.
  *             properties:
  *               token:
  *                 type: string
- *                 description: information des_account_numer encrypted.
+ *                 description: information des_account_number encrypted.
  *               bank_code:
  *                 type: string
- *                 description: The bank of sender ( other bank).
+ *                 description: The bank of sender (other bank).
  *           example:
  *             token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjp7ImRlc19hY2NvdW50X251bWJlciI6IjExMTExIiwiZGVzX2JhbmtfY29kZSI6IlNMQiJ9LCJpYXQiOjE2NzI4MDM0ODIsImV4cCI6MTY3MjkwMzQ4Mn0.KXtrhcOK6G_-l_YpwFGy_hysw-G4SdTCvmzKrLyQ5ld7_qDOPeV0hnzP6-fgbwMDU21JON0ySwIO-2G5kAKKIME_GBuD9S-eQ7OY5yZY8tfQB_-ExQhuRR_0bkS4clIc-FTVkrkIsSlauYH72_6ULhhH0DHO9R5C0nrOtKEDVxc"
  *             bank_code: "TXB"
@@ -1363,7 +1470,20 @@ router.post("/:userId/intertransaction", validateParams, authUser,authRole(role.
  *                   description: The status of get information bank account                
  *                 infoRecipient:
  *                   type: object
- *                   description: information of recipient ( our bank)
+ *                   description: information of recipient (our bank)
+ *                   properties:
+ *                     user_id:
+ *                       type: integer
+ *                       description: The id of user
+ *                     full_name:
+ *                       type: string
+ *                       description: The full name of user
+ *                     email:
+ *                       type: string
+ *                       description: The email of recipient
+ *                     phone:
+ *                       type: string
+ *                       description: The phone of recipient
  *             example:
  *                 isSuccess: true
  *                 infoRecipient: {
@@ -1380,11 +1500,11 @@ router.post("/:userId/intertransaction", validateParams, authUser,authRole(role.
  *               Invalid Bank:
  *                 value:
  *                   isSuccess: false
- *                   message: Bank doesn't belongs to system connectivity banks
+ *                   message: Bank doesn't belong to system connectivity banks
  *               Locked Bank Account:
  *                 value:
  *                   isSuccess: false
- *                   messsage: "This account number is locked"
+ *                   message: "This account number is locked"
  *               Decode Token Failed:
  *                 value:
  *                   isSuccess: false
@@ -1399,7 +1519,7 @@ router.post("/:userId/intertransaction", validateParams, authUser,authRole(role.
  *           application/json:
  *             example:
  *               isSuccess: false
- *               message: Can not verified token
+ *               message: Can not verify token
  *       "500":
  *         description: Invalid Getting Destination User Information.
  *         content:
@@ -1541,6 +1661,31 @@ router.post("/desaccount", async (req, res) => {
  *                 infoTransaction:
  *                   type: object
  *                   description: The information of a transaction
+ *                   properties:
+ *                     isSavedRecipientTable:
+ *                       type: boolean
+ *                       description: Whether recipient is saved
+ *                     full_name:
+ *                       type: string
+ *                       description: The full name of recipient
+ *                     des_account_number:
+ *                       type: string
+ *                       description: The recipient account number
+ *                     bank:
+ *                       type: string
+ *                       description: The name of recipient's bank
+ *                     transaction_amount:
+ *                       type: integer
+ *                       description: The amount of transaction
+ *                     transaction_message:
+ *                       type: string
+ *                       description: The message of transaction
+ *                     transaction_fee:
+ *                       type: integer
+ *                       description: The fee of transaction
+ *                     total:
+ *                       type: integer
+ *                       description: The total amount includes fee and transaction amount
  *             examples:
  *               Transaction Complete:
  *                 value:
@@ -1566,11 +1711,10 @@ router.post("/desaccount", async (req, res) => {
  *               Verified Token Failed:
  *                 value:
  *                   isSuccess: false
- *                   message: "Can not verified transaction of other bank"
+ *                   message: "Can not verify transaction of other bank"
  *               Unauthorized User:
  *                 value:
  *                   message: Unauthorized user!
- *                   
  *       "403":
  *         description: Transaction failed.
  *         content:
@@ -1759,7 +1903,7 @@ router.post("/intertransaction/:id", authUser, async (req, res) => {
  * @swagger
  * /customers/intertransaction:
  *   post:
- *     summary: Receive money from other bank ( intertransaction)
+ *     summary: Receive money from other bank (intertransaction)
  *     tags: [Customer Transaction]
  *     requestBody:
  *       description: Information Transaction
@@ -1793,7 +1937,14 @@ router.post("/intertransaction/:id", authUser, async (req, res) => {
  *                   description: Confirm Transaction is completed                
  *                 encryptedData:
  *                   type: object
- *                   description: information of des_account_number ( our bank) encrypted
+ *                   description: information of des_account_number (our bank) encrypted
+ *                   properties:
+ *                     encryptedToken:
+ *                       type: string
+ *                       description: Info of des_account_number encrypted
+ *                     bank_code:
+ *                       type: string
+ *                       description: Our bank code
  *             example:
  *                 isSuccess: true
  *                 message: Transaction completed
@@ -1809,7 +1960,7 @@ router.post("/intertransaction/:id", authUser, async (req, res) => {
  *               Invalid Bank:
  *                 value:
  *                   isSuccess: false
- *                   message: Bank doesn't belongs to system connectivity banks
+ *                   message: Bank doesn't belong to system connectivity banks
  *               Locked Bank Account:
  *                 value:
  *                   isSuccess: false
@@ -1832,14 +1983,14 @@ router.post("/intertransaction/:id", authUser, async (req, res) => {
  *           application/json:
  *             example:
  *               isSuccess: false
- *               message: Can not verified token
+ *               message: Can not verify token
  *       "500":
  *         description: Invalid Transaction.
  *         content:
  *           application/json:
  *             example:
  *               isSuccess: false
- *               message: Can not done the transaction
+ *               message: Can not complete the transaction
  */
 
 router.post("/intertransaction", async (req, res) => {

@@ -1076,21 +1076,145 @@ router.delete('/:userId/recipients/:accountNumber', validateParams, authUser, au
  *                   items:
  *                     type: object
  *                     properties:
+ *                       transaction_id:
+ *                         type: integer
+ *                         description: The transaction id
+ *                       src_account_number:
+ *                         type: string
+ *                         description: The account number paid debt
+ *                       des_account_number:
+ *                         type: string
+ *                         description: The account number receive amount from debt
+ *                       transaction_amount:
+ *                         type: integer
+ *                         description: The amount of transaction
+ *                       transaction_message:
+ *                         type: string
+ *                         description: The message of transaction
+ *                       pay_transaction_fee:
+ *                         type: string
+ *                         description: Which account number pay for tranfer fee (SRC or DES)
+ *                       is_success:
+ *                         type: boolean
+ *                         description: The transaction status
+ *                       transaction_created_at:
+ *                         type: string
+ *                         format: date-time
+ *                         description: The created date-time transaction
+ *                       transaction_type:
+ *                         type: integer
+ *                         description: The type of transaction (debt payment or transfer)
+ *                       other_fullname:
+ *                         type: string
+ *                         description: The full name of received account
  *                 received_debt_list:
  *                   type: array
  *                   items:
  *                     type: object
  *                     properties:
+ *                       transaction_id:
+ *                         type: integer
+ *                         description: The transaction id
+ *                       src_account_number:
+ *                         type: string
+ *                         description: The account number execute transaction
+ *                       des_account_number:
+ *                         type: string
+ *                         description: The account number receive amount from transaction
+ *                       transaction_amount:
+ *                         type: integer
+ *                         description: The amount of transaction
+ *                       transaction_message:
+ *                         type: string
+ *                         description: The message of transaction
+ *                       pay_transaction_fee:
+ *                         type: string
+ *                         description: Which account number pay for tranfer fee (SRC or DES)
+ *                       is_success:
+ *                         type: boolean
+ *                         description: The transaction status
+ *                       transaction_created_at:
+ *                         type: string
+ *                         format: date-time
+ *                         description: The created date-time transaction
+ *                       transaction_type:
+ *                         type: integer
+ *                         description: The type of transaction (debt payment or transfer)
+ *                       other_fullname:
+ *                         type: string
+ *                         description: The full name of received account
  *                 charge_by_SLB:
  *                   type: array
  *                   items:
  *                     type: object
  *                     properties:
+ *                       transaction_id:
+ *                         type: integer
+ *                         description: The transaction id
+ *                       src_account_number:
+ *                         type: string
+ *                         description: The account number execute transaction
+ *                       des_account_number:
+ *                         type: string
+ *                         description: The account number receive amount from transaction
+ *                       transaction_amount:
+ *                         type: integer
+ *                         description: The amount of transaction
+ *                       transaction_message:
+ *                         type: string
+ *                         description: The message of transaction
+ *                       pay_transaction_fee:
+ *                         type: string
+ *                         description: Which account number pay for tranfer fee (SRC or DES)
+ *                       is_success:
+ *                         type: boolean
+ *                         description: The transaction status
+ *                       transaction_created_at:
+ *                         type: string
+ *                         format: date-time
+ *                         description: The created date-time transaction
+ *                       transaction_type:
+ *                         type: integer
+ *                         description: The type of transaction (debt payment or transfer)
+ *                       other_fullname:
+ *                         type: string
+ *                         description: The full name of received account
  *                 received_from_others:
  *                   type: array
  *                   items:
  *                     type: object
  *                     properties:
+ *                       transaction_id:
+ *                         type: integer
+ *                         description: The transaction id
+ *                       src_account_number:
+ *                         type: string
+ *                         description: The account number execute transaction
+ *                       des_account_number:
+ *                         type: string
+ *                         description: The account number receive amount from transaction
+ *                       transaction_amount:
+ *                         type: integer
+ *                         description: The amount of transaction
+ *                       transaction_message:
+ *                         type: string
+ *                         description: The message of transaction
+ *                       pay_transaction_fee:
+ *                         type: string
+ *                         description: Which account number pay for tranfer fee (SRC or DES)
+ *                       is_success:
+ *                         type: boolean
+ *                         description: The transaction status
+ *                       transaction_created_at:
+ *                         type: string
+ *                         format: date-time
+ *                         description: The created date-time transaction
+ *                       transaction_type:
+ *                         type: integer
+ *                         description: The type of transaction (debt payment or transfer)
+ *                       other_fullname:
+ *                         type: string
+ *                         description: The full name of received account
  *             examples:
  *               Get successfully:
  *                 value:
