@@ -73,13 +73,13 @@ router.get("/transactions", async(req,res)=>{
 router.get("/employees", async(req,res)=>{
     try{
         const employeeList = await userModel.findAllUser(role.EMPLOYEE)
-        res.status(200).json({
-            isSuccess:true,
+        return res.status(200).json({
+            isSuccess: true,
             employeeList
         })
     }catch(err){
         console.log(err)
-        res.status(500).json({
+        return res.status(500).json({
             isSuccess: false,
             message:"Can not get employee list"
         })
@@ -124,13 +124,13 @@ router.post('/employee', validate(employeeSchema), async function (req, res) {
         newUserAccount.user_id = await userModel.genericMethods.add(newUser)
         await userAccountModel.genericMethods.add(newUserAccount)
 
-        res.status(200).json({
-            success: true,
+        return res.status(200).json({
+            isSuccess: true,
             message: "Create new employee successfully",
         })
     } catch (e) {
         console.log(e)
-        res.status(500).json({
+        return res.status(500).json({
             isSuccess: false,
             message:"Cannot create new employee"
         })
