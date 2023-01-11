@@ -1,7 +1,7 @@
 /**
  * @swagger
  * tags:
- *   name: Banks
+ *   name: Bank
  *   description: API to handle features and information belonging to Bank.
  * components:
  *   schemas:
@@ -23,27 +23,49 @@
  *       example:
  *          bank_code: "SLB"
  *          bank_name: "Solar Bank"
- *          public_key: "abc"
+ *          public_key: "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCBaupoGFgzyEg3itWMC6LijzHWWxeIyHz/KdIxq0KfugzvPthGnBn3FtZn+XrPQ10Vv5UTMhOUfNLg/QOOOfXVGmXxc8y1BOW8SBEAEK6WWJ9O6rORt/u2ShbxrPpVRef3YvZG/0Gq3kpi0LaqMFihj5lE3IOJp1zle/AAfKoR9wIDAQAB"
  *          encoding_type: "RSA"
  */
 import express from "express"
 import bankModel from "../models/bank.model.js"
 import bankingAccountModel from "../models/banking-account.model.js";
+import {authUser} from "../middlewares/auth.mdw.js";
 
 const router = express.Router()
 
 
 /**
  * @swagger
- * /banks/:
+ * /banks:
  *   get:
  *     summary: Get all banks
- *     tags: [Banks]
+ *     tags: [Bank]
+ *     parameters:
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
  *     responses:
  *       "200":
  *         description: Successful operation.
  *         content:
  *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The get status
+ *                 bankList:
+ *                   type: array
+ *                   items:
+ *                     $ref: "#/components/schemas/Bank"
  *             examples:
  *               Get successfully:
  *                 value:
@@ -51,12 +73,21 @@ const router = express.Router()
  *                   bankList:
  *                   - bank_code: "SLB"
  *                     bank_name: "Solar Bank"
- *                     public_key: "oijf932"
+ *                     public_key: "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCBaupoGFgzyEg3itWMC6LijzHWWxeIyHz/KdIxq0KfugzvPthGnBn3FtZn+XrPQ10Vv5UTMhOUfNLg/QOOOfXVGmXxc8y1BOW8SBEAEK6WWJ9O6rORt/u2ShbxrPpVRef3YvZG/0Gq3kpi0LaqMFihj5lE3IOJp1zle/AAfKoR9wIDAQAB"
  *                     encoding_type: "RSA"
  *                   - bank_code: "SCB"
  *                     bank_name: "SaiGon Bank"
- *                     public_key: "avkjnn93"
+ *                     public_key: "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCBaupoGFgzyEg3itWMC6LijzHWWxeIyHz/KdIxq0KfugzvPthGnBn3FtZn+XrPQ10Vv5UTMhOUfNLg/QOOOfXVGmXxc8y1BOW8SBEAEK6WWJ9O6rORt/u2ShbxrPpVRef3YvZG/0Gq3kpi0LaqMFihj5lE3IOJp1zle/AAfKoR9wIDAQAB"
  *                     encoding_type: "PGP"
+ *               Get new access token:
+ *                 value:
+ *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
  *       "500":
  *         description: Undefined Bank
  *         content:
@@ -65,7 +96,7 @@ const router = express.Router()
  *               isSuccess: false
  *               message: 'Can not get bank list'
  */
-router.get("/",async(req,res)=>{
+router.get("/", authUser, async(req,res)=>{
     try{
         const bankList = await bankModel.genericMethods.findAll()
         res.status(200).json({
@@ -86,7 +117,7 @@ router.get("/",async(req,res)=>{
  * /banks/infoUser:
  *   get:
  *     summary: Get user's information by account number
- *     tags: [Banks]
+ *     tags: [Bank]
  *     parameters:
  *     - name: account_number
  *       in: query
@@ -94,19 +125,53 @@ router.get("/",async(req,res)=>{
  *       required: true
  *       schema:
  *         type: string
+ *     - name: access_token
+ *       in: header
+ *       description: A string is used to access authentication features
+ *       schema:
+ *         type: string
+ *     - name: refresh_token
+ *       in: header
+ *       description: A string is used to refresh access token if expired
+ *       schema:
+ *         type: string
  *     responses:
  *       "200":
  *         description: Successful operation.
  *         content:
  *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isSuccess:
+ *                   type: boolean
+ *                   description: The get status
+ *                 userInfo:
+ *                   type: object
+ *                   properties:
+ *                     full_name:
+ *                       type: string
+ *                       description: The full name of user
+ *                     email:
+ *                       type: string
+ *                       description: The email of user
+ *                     phone:
+ *                       type: string
+ *                       description: The phone number of user
  *             example:
  *               value:
  *                 isSuccess: true
  *                 userInfo:
- *                 - full_name: "Nguyen Van A"
+ *                   full_name: "Nguyen Van A"
  *                   email: "test@abc.com"
  *                   phone: "0123456789"
- *       "400":
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ *       "500":
  *         description: Undefined user.
  *         content:
  *           application/json:
@@ -114,7 +179,7 @@ router.get("/",async(req,res)=>{
  *               isSuccess: false
  *               message: 'Can not find user info'
  */
-router.get("/infoUser",async function(req,res){
+router.get("/infoUser", authUser, async function(req,res){
     try{
         const account_number = req.query.account_number;
         console.log(account_number)
