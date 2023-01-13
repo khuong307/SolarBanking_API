@@ -1,3 +1,10 @@
+/**
+ * @swagger
+ * tags:
+ *   name: Admin
+ *   description: API to handle features belonging to Admin.
+ */
+
 import express from "express"
 import transactionModel from "../models/transactions.model.js";
 import { filterArray } from "../utils/array.js";
@@ -21,7 +28,7 @@ const router = express.Router()
  * @swagger
  * /admin/transactions:
  *   get:
- *     summary: Get transactions base on query params.
+ *     summary: Get transactions based on query params.
  *     tags: [Admin]
  *     parameters:
  *     - name: accessInfo
@@ -147,6 +154,18 @@ const router = express.Router()
  *               Get new access token:
  *                 value:
  *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ *       "403":
+ *         description: User must be admin
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Not allowed user!
  *       "500":
  *         description: Server Internal Error
  *         content:
@@ -274,6 +293,18 @@ router.get("/transactions", authUser, authorization(role.ADMIN), async(req,res)=
  *               Get new access token:
  *                 value:
  *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ *       "403":
+ *         description: User must be admin
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Not allowed user!
  *       "500":
  *         description: Server Internal Error
  *         content:
@@ -346,6 +377,18 @@ router.get("/employees", authUser, authorization(role.ADMIN), async(req,res)=>{
  *               Get new access token:
  *                 value:
  *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ *       "403":
+ *         description: User must be admin
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Not allowed user!
  *       "500":
  *         description: Server Internal Error
  *         content:
@@ -451,6 +494,18 @@ router.delete("/employee/:id", authUser, authorization(role.ADMIN), async (req,r
  *               Get new access token:
  *                 value:
  *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ *       "403":
+ *         description: User must be admin
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Not allowed user!
  *       "500":
  *         description: Server Internal Error
  *         content:
@@ -494,7 +549,7 @@ router.post('/employee', authUser, authorization(role.ADMIN), validate(employeeS
  * @swagger
  * /admin/employee/{userId}:
  *   patch:
- *     summary: Update infomation of employee.
+ *     summary: Update information of employee.
  *     tags: [Admin]
  *     parameters:
  *     - name: accessInfo
@@ -580,15 +635,27 @@ router.post('/employee', authUser, authorization(role.ADMIN), validate(employeeS
  *         content:
  *           application/json:
  *             example:
- *                "isSuccess": false
- *                "message": "Cannot find this employee"
+ *               "isSuccess": false
+ *               "message": "Cannot find this employee"
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ *       "403":
+ *         description: User must be admin
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Not allowed user!
  *       "500":
  *         description: Server Internal Error
  *         content:
  *           application/json:
  *             example:
  *                "isSuccess": false
- *                "message": "Cannot update employee infomation"
+ *                "message": "Cannot update employee information"
  */
 router.patch('/employee/:userId', authUser, authorization(role.ADMIN), validateParams, validate(employeeSchema), async function(req, res) {
     try {
@@ -712,13 +779,25 @@ router.patch('/employee/:userId', authUser, authorization(role.ADMIN), validateP
  *             example:
  *                "isSuccess": false
  *                "message": "Cannot find this employee"
+ *       "401":
+ *         description: Unauthorized user
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Unauthorized user!
+ *       "403":
+ *         description: User must be admin
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Not allowed user!
  *       "500":
  *         description: Server Internal Error
  *         content:
  *           application/json:
  *             example:
  *                "isSuccess": false
- *                "message": "Cannot get employee infomation"
+ *                "message": "Cannot get employee information"
  */
 router.get('/employee/:userId', authUser, authorization(role.ADMIN), async function(req, res) {
     try {
