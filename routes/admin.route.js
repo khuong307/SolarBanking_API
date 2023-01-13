@@ -447,7 +447,7 @@ router.delete("/employee/:id", authUser, authorization(role.ADMIN), async (req,r
  *               Post successfully:
  *                 value:
  *                   "isSuccess": true
- *                   "message": "Delete employee successfully"
+ *                   "message": "Create employee successfully"
  *               Get new access token:
  *                 value:
  *                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoibnNuaGFuIiwiaWF0IjoxNjcyNTU5NTUxLCJleHAiOjE2NzI1NjAxNTF9.9dtX_GD4xQxuJ59Rw7fQFKds4fTJe0bSr4LcjHYyDvw
@@ -457,7 +457,7 @@ router.delete("/employee/:id", authUser, authorization(role.ADMIN), async (req,r
  *           application/json:
  *             example:
  *                "isSuccess": false
- *                "message": "Delete employee unsuccessfully"
+ *                "message": "Create employee unsuccessfully"
  */
 router.post('/employee', authUser, authorization(role.ADMIN), validate(employeeSchema), async function (req, res) {
     const {full_name, email, phone, username, password} = req.body
@@ -568,7 +568,7 @@ router.post('/employee', authUser, authorization(role.ADMIN), validate(employeeS
  *                 message:
  *                   type: string
  *             examples:
- *               Path successfully:
+ *               Patch successfully:
  *                 value:
  *                   "isSuccess": true
  *                   "message": "Update employee infomation successfully"
@@ -692,7 +692,7 @@ router.patch('/employee/:userId', authUser, authorization(role.ADMIN), validateP
  *                      type: string
  *                      description: The confirm password of employee
  *             examples:
- *               Post successfully:
+ *               Get successfully:
  *                 value:
  *                   "isSuccess": true
  *                   "user": {
